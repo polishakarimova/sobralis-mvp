@@ -1,0 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export default function CancelRulesPanel({ paymentsOpen, paymentDeadline }: any) {
+  return <div className="mt-5 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"><div className="text-xs font-black uppercase tracking-wide text-stone-500">Отмена и возвраты</div><h3 className="mt-1 text-xl font-black">Правила лучше показать до оплаты</h3><p className="mt-1 text-sm leading-6 text-stone-600">В рабочей версии здесь будут условия конкретного места: до какого времени можно отказаться, что происходит с предоплатой и как место переходит человеку из листа ожидания.</p><div className="mt-3 rounded-2xl bg-stone-50 px-4 py-3 text-sm font-bold text-stone-700">{paymentsOpen ? `Оплата открыта. Дедлайн оплаты: ${paymentDeadline}. После оплаты отмена идёт по правилам места.` : "Пока идёт сбор интереса — можно выйти без возвратов и споров."}</div></div>;
+}
