@@ -30,8 +30,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files - never commit real database URLs or secrets
+.env
+.env.local
+.env.production
+.env*.local
+
+# codex local runtime/deploy artifacts
+.codex/*.log
+.codex/*_key
+.codex/*_key.pub
 
 # vercel
 .vercel

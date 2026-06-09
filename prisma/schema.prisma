@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  guest
+  participant
+  organizer
+  owner
+  admin
+}
+
+enum AuthProvider {
+  telegram
+  yandex
+  phone
+  guest
+}
+
+enum BookingMode {
+  instant
+  request
+  manager
+}
+
+enum AvailabilityStatus {
+  available
+  request
+  busy
+}
+
+enum AddOnType {
+  pre_event
+  on_site
+}
+
+enum EventStatus {
+  draft
+  collecting_interest
+  awaiting_place_confirmation
+  place_confirmed
+  composition_fixed
+  payments_open
+  confirmed
+  cancelled
+}
+
+enum ParticipantStatus {
+  interested
+  joined
+  waitlisted
+  invited_from_waitlist
+  cancelled
+}
+
+enum PaymentStatus {
+  idle
+  marked
+  confirmed
+  rejected
+  refunded
+}
+
+enum ParticipantAddOnStatus {
+  selected
+  purchased
+  cancelled
+}
+
+enum ChargeStatus {
+  waiting
+  marked_paid
+  confirmed_by_owner
+  rejected_by_owner
+  disputed
+  refunded
+}
+
+enum WaitlistStatus {
+  waiting
+  invited
+  accepted
+  skipped
+}
+
+enum BookingRequestStatus {
+  pending
+  confirmed
+  busy
+  another_time
+  cancelled
+}
+
+enum PaymentMethodType {
+  static_sbp_qr
+  payment_link
+  bank_details
+  api
+}
+
+enum ConsentType {
+  service_terms
+  personal_data
+  marketing_offers
+  telegram_notifications
+}
+
+enum TelegramRole {
+  user
+  owner
+  manager
+  admin
+}
+
+enum BroadcastTarget {
+  all_users
+  organizers
+  participants
+}
+
+enum BroadcastStatus {
+  draft
+  simulated_sent
+  cancelled
+}
+
+model User {
+  id              String             @id @default(cuid())
+  name            String
+  email           String?
+  phone           String?
+  role            UserRole           @default(participant)
+  telegramId      String?            @unique
+  telegramUsername String?
+  telegramFirstName String?
+  telegramLastName String?
+  telegramPhotoUrl String?
+  telegramLinkedAt DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  authIdentities  AuthIdentity[]
+  organizedEvents Event[]            @relation("EventOrganizer")
+  participants    EventParticipant[]
+  waitlistEntries WaitlistEntry[]
+  ownerAccounts   OwnerAccount[]
+  telegramAccount TelegramAccount?
+  consents         Consent[]
+  telegramLoginRequests TelegramLoginRequest[]
+}
+
+model AuthIdentity {
+  id             String       @id @default(cuid())
+  userId         String
+  provider       AuthProvider
+  providerUserId String
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model Place {
+  id                 String              @id @default(cuid())
+  title              String
+  location           String
+  type               String
+  capacity           Int
+  hourlyRate         Int
+  minHours           Int
+  price              Int
+  extraHourRate      Int
+  bookingMode        BookingMode
+  availabilityStatus AvailabilityStatus
+  confirmationTime   String
+  pricingTitle       String
+  perHour            String
+  image              String
+  vibe               String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  addOns             PlaceAddOn[]
+  includes           PlaceInclude[]
+  events             Event[]
+  bookingRequests    BookingRequest[]
+  ownerAccounts      OwnerAccount[]
+  paymentMethods     PaymentMethod[]
+}
+
+model PlaceAddOn {
+  id                 String             @id @default(cuid())
+  placeId            String
+  title              String
+  price              Int
+  type               AddOnType
+  createdAt          DateTime           @default(now())
+  place              Place              @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  participantAddOns  ParticipantAddOn[]
+
+  @@index([placeId])
+}
+
+model PlaceInclude {
+  id      String @id @default(cuid())
+  placeId String
+  title   String
+  place   Place  @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([placeId])
+}
+
+model Event {
+  id                String              @id @default(cuid())
+  title             String
+  kind              String              @default("other")
+  mapUrl            String?
+  placeId           String
+  organizerId       String?
+  date              DateTime
+  startTime         String
+  endTime           String
+  guestsLimit       Int
+  minGuests         Int
+  targetBudget      Int
+  joinDeadline      DateTime
+  paymentDeadline   DateTime
+  paymentMode       String
+  coverImageUrl     String?
+  coverImageKey     String?
+  coverImageSource  String?
+  coverImagePositionX Int                 @default(50)
+  coverImagePositionY Int                 @default(50)
+  coverImageScale  Int                 @default(100)
+  status            EventStatus         @default(collecting_interest)
+  shareSlug         String              @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  place             Place               @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  organizer         User?               @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
+  participants      EventParticipant[]
+  charges           ParticipantCharge[]
+  waitlistEntries   WaitlistEntry[]
+  bookingRequests   BookingRequest[]
+
+  @@index([placeId])
+  @@index([organizerId])
+}
+
+model EventParticipant {
+  id              String              @id @default(cuid())
+  eventId         String
+  userId          String?
+  name            String
+  comment         String?
+  status          ParticipantStatus
+  paymentStatus   PaymentStatus       @default(idle)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  event           Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user            User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  addOns          ParticipantAddOn[]
+  charges         ParticipantCharge[]
+
+  @@index([eventId])
+  @@index([userId])
+}
+
+model ParticipantAddOn {
+  id              String                 @id @default(cuid())
+  participantId   String
+  addOnId         String
+  priceAtPurchase Int
+  status          ParticipantAddOnStatus @default(selected)
+  participant     EventParticipant       @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  addOn           PlaceAddOn             @relation(fields: [addOnId], references: [id], onDelete: Restrict)
+
+  @@index([participantId])
+  @@index([addOnId])
+}
+
+model ParticipantCharge {
+  id             String           @id @default(cuid())
+  eventId        String
+  participantId  String
+  baseAmount     Int
+  addOnsAmount   Int
+  totalAmount    Int
+  paymentCode    String
+  status         ChargeStatus     @default(waiting)
+  receiptUrl     String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant    EventParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentCode])
+  @@index([eventId])
+  @@index([participantId])
+}
+
+model WaitlistEntry {
+  id        String         @id @default(cuid())
+  eventId   String
+  userId    String?
+  name      String
+  comment   String?
+  status    WaitlistStatus @default(waiting)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([userId])
+}
+
+model BookingRequest {
+  id         String               @id @default(cuid())
+  eventId    String
+  placeId    String
+  status     BookingRequestStatus @default(pending)
+  ownerReply String?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  event      Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  place      Place                @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([placeId])
+}
+
+model OwnerAccount {
+  id                 String  @id @default(cuid())
+  userId             String
+  placeId            String
+  canConfirmBookings Boolean @default(true)
+  canConfirmPayments Boolean @default(true)
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place              Place   @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, placeId])
+  @@index([placeId])
+}
+
+model TelegramAccount {
+  id         String       @id @default(cuid())
+  userId     String?      @unique
+  telegramId String       @unique
+  chatId     String
+  username   String?
+  role       TelegramRole @default(user)
+  createdAt  DateTime     @default(now())
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model TelegramLoginRequest {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String?
+  returnTo  String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Broadcast {
+  id        String          @id @default(cuid())
+  title     String
+  message   String
+  target    BroadcastTarget @default(all_users)
+  status    BroadcastStatus @default(draft)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  sentAt    DateTime?
+}
+
+model AdminAction {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model PaymentMethod {
+  id       String            @id @default(cuid())
+  placeId  String
+  type     PaymentMethodType
+  title    String
+  value    String
+  isActive Boolean           @default(true)
+  place    Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([placeId])
+}
+
+model Consent {
+  id        String      @id @default(cuid())
+  userId    String
+  type      ConsentType
+  value     Boolean
+  createdAt DateTime    @default(now())
+  revokedAt DateTime?
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
