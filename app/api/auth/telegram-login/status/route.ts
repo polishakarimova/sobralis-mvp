@@ -34,12 +34,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: false, error: "Login request not found" }, { status: 404 });
     }
 
-    if (loginRequest.expiresAt < new Date()) {
-      return NextResponse.json({ ok: false, error: "Login request expired" }, { status: 410 });
+    if (!loginRequest.user) {
+      if (loginRequest.expiresAt < new Date()) {
+        return NextResponse.json({ ok: false, error: "Login request expired" }, { status: 410 });
+      }
+
+      return NextResponse.json({ ok: true, data: { status: "pending" } });
     }
 
-    if (!loginRequest.user) {
-      return NextResponse.json({ ok: true, data: { status: "pending" } });
+    if (loginRequest.usedAt) {
+      const confirmedAgeMs = Date.now() - loginRequest.usedAt.getTime();
+      if (confirmedAgeMs > 10 * 60 * 1000) {
+        return NextResponse.json({ ok: false, error: "Login request expired" }, { status: 410 });
+      }
+    } else if (loginRequest.expiresAt < new Date()) {
+      return NextResponse.json({ ok: false, error: "Login request expired" }, { status: 410 });
     }
 
     const response = NextResponse.json({
@@ -69,11 +78,6 @@ export async function GET(request: Request) {
       secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
-    });
-
-    await prisma.telegramLoginRequest.update({
-      where: { token },
-      data: { expiresAt: new Date() },
     });
 
     return response;

@@ -30,15 +30,8 @@ type TelegramWebApp = {
   };
   ready?: () => void;
   expand?: () => void;
+  close?: () => void;
   openTelegramLink?: (url: string) => void;
-  showPopup?: (
-    params: {
-      title?: string;
-      message: string;
-      buttons?: Array<{ id?: string; type?: "default" | "ok" | "close" | "cancel" | "destructive"; text?: string }>;
-    },
-    callback?: (buttonId: string) => void,
-  ) => void;
 };
 
 declare global {
@@ -216,24 +209,27 @@ function getTelegramWebApp() {
   return window.Telegram?.WebApp;
 }
 
-function showTelegramAuthInstruction(message: string) {
-  return new Promise<void>((resolve) => {
-    const webApp = getTelegramWebApp();
-    if (webApp?.showPopup) {
-      webApp.showPopup(
-        {
-          title: "Вход через Telegram",
-          message,
-          buttons: [{ id: "ok", type: "ok", text: "ОК" }],
-        },
-        () => resolve(),
-      );
-      return;
-    }
+function openTelegramAuthLink(botUrl: string, pendingWindow: Window | null, shouldOpenInCurrentWindow: boolean) {
+  const webApp = getTelegramWebApp();
 
-    window.alert(message);
-    resolve();
-  });
+  if (webApp?.openTelegramLink) {
+    webApp.openTelegramLink(botUrl);
+    window.setTimeout(() => webApp.close?.(), 1800);
+    return "telegram-webapp" as const;
+  }
+
+  if (shouldOpenInCurrentWindow) {
+    window.location.href = botUrl;
+    return "current-window" as const;
+  }
+
+  if (pendingWindow) {
+    pendingWindow.location.href = botUrl;
+    return "new-window" as const;
+  }
+
+  window.location.href = botUrl;
+  return "current-window" as const;
 }
 
 const eventKinds: Array<{ id: EventKind; title: string; description: string; accent: string }> = [
@@ -1167,8 +1163,18 @@ export default function App() {
     const shouldOpenInCurrentWindow = /Telegram/i.test(userAgent);
     const pendingWindow = webApp?.openTelegramLink || shouldOpenInCurrentWindow ? null : window.open("", "_blank", "noopener,noreferrer");
     setEventAuthLoading(true);
-    setNotice("Открываем Telegram. В боте нажмите «Авторизоваться». Если вы вернётесь на эту страницу, вход продолжится автоматически.");
+    setNotice("Откроем бот «Собрались». Если Telegram спросит «Открыть?», нажмите OK, затем в боте нажмите «Авторизоваться».");
     setError("");
+
+    const finishTelegramLogin = async (token: string) => {
+      const profile = await waitForTelegramLogin(token);
+      setCabinetUser(profile);
+      setGuestName((current) => current || profile.name);
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+      await refreshActiveEvent(eventId);
+      setNotice("Готово, Telegram подтверждён. Теперь можно занять место.");
+      setError("");
+    };
 
     try {
       const response = await fetch("/api/auth/telegram-login/start", {
@@ -1186,28 +1192,20 @@ export default function App() {
         source: "event",
       });
 
-      await showTelegramAuthInstruction(
-        "Сейчас откроется бот «Собрались». В боте нажмите «Авторизоваться», а потом кнопку «Вернуться к событию». После возврата приложение продолжит вход автоматически.",
-      );
-
-      if (webApp?.openTelegramLink) {
-        webApp.openTelegramLink(payload.data.botUrl);
-      } else if (shouldOpenInCurrentWindow) {
-        window.location.href = payload.data.botUrl;
+      const openMode = openTelegramAuthLink(payload.data.botUrl, pendingWindow, shouldOpenInCurrentWindow);
+      if (openMode === "current-window") {
         return;
-      } else if (pendingWindow) {
-        pendingWindow.location.href = payload.data.botUrl;
-      } else {
-        window.location.href = payload.data.botUrl;
+      }
+      if (openMode === "telegram-webapp") {
+        setNotice("Бот открыт. Нажмите в нём «Авторизоваться», затем «Вернуться к событию». Если окно не переключилось, нажмите кнопку ещё раз.");
+        void finishTelegramLogin(payload.data.token).catch((authError) => {
+          setNotice("");
+          setError(authError instanceof Error ? authError.message : "Не получилось войти через Telegram");
+        });
+        return;
       }
 
-      const profile = await waitForTelegramLogin(payload.data.token);
-      setCabinetUser(profile);
-      setGuestName((current) => current || profile.name);
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-      await refreshActiveEvent(eventId);
-      setNotice("Готово, Telegram подтверждён. Теперь можно занять место.");
-      setError("");
+      await finishTelegramLogin(payload.data.token);
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Не получилось войти через Telegram");
     } finally {
@@ -1532,7 +1530,11 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
     const pendingWindow = webApp?.openTelegramLink || shouldOpenInCurrentWindow ? null : window.open("", "_blank", "noopener,noreferrer");
 
     setIsTelegramAuthLoading(true);
-    setTelegramAuthMessage("Открываем Telegram. В боте нажмите «Авторизоваться». Если вы вернётесь сюда, вход продолжится автоматически.");
+    setTelegramAuthMessage("Откроем бот «Собрались». Если Telegram спросит «Открыть?», нажмите OK, затем в боте нажмите «Авторизоваться».");
+
+    const finishTelegramLogin = async (token: string) => {
+      await pollTelegramLogin(token);
+    };
 
     try {
       const response = await fetch("/api/auth/telegram-login/start", {
@@ -1552,22 +1554,19 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
         source: "account",
       });
 
-      await showTelegramAuthInstruction(
-        "Сейчас откроется бот «Собрались». В боте нажмите «Авторизоваться», а потом кнопку «Вернуться в приложение». После возврата кабинет откроется автоматически.",
-      );
-
-      if (webApp?.openTelegramLink) {
-        webApp.openTelegramLink(payload.data.botUrl);
-      } else if (shouldOpenInCurrentWindow) {
-        window.location.href = payload.data.botUrl;
+      const openMode = openTelegramAuthLink(payload.data.botUrl, pendingWindow, shouldOpenInCurrentWindow);
+      if (openMode === "current-window") {
         return;
-      } else if (pendingWindow) {
-        pendingWindow.location.href = payload.data.botUrl;
-      } else {
-        window.location.href = payload.data.botUrl;
+      }
+      if (openMode === "telegram-webapp") {
+        setTelegramAuthMessage("Бот открыт. Нажмите в нём «Авторизоваться», затем «Вернуться в приложение». Если окно не переключилось, нажмите кнопку ещё раз.");
+        void finishTelegramLogin(payload.data.token).catch((error) => {
+          setTelegramAuthMessage(error instanceof Error ? error.message : "Не получилось войти через Telegram");
+        });
+        return;
       }
 
-      await pollTelegramLogin(payload.data.token);
+      await finishTelegramLogin(payload.data.token);
     } catch (error) {
       setTelegramAuthMessage(error instanceof Error ? error.message : "Не получилось войти через Telegram");
     } finally {
