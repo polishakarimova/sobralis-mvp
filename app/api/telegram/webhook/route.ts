@@ -95,6 +95,10 @@ async function sendTelegramMethod(methodPayload: TelegramWebhookMethod) {
     if (!response.ok) {
       throw new Error(`Telegram ${method} failed: ${response.status} ${await response.text()}`);
     }
+    console.info("Telegram webhook response sent", {
+      method,
+      chatId: "chat_id" in payload ? payload.chat_id : undefined,
+    });
   } finally {
     clearTimeout(timeout);
   }
@@ -175,7 +179,8 @@ function eventInviteMessage(chatId: number | string, eventId: string) {
 
 async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMethod | undefined> {
   const message = update.message;
-  if (!message?.from || !message.text) return;
+  if (!message?.from) return;
+  if (!message.text) return requiredConsentMessage(message.chat.id);
 
   const text = message.text.trim();
 
@@ -324,6 +329,13 @@ export async function POST(request: Request) {
     }
 
     const update = (await request.json()) as TelegramUpdate;
+    console.info("Telegram webhook update received", {
+      keys: Object.keys(update),
+      hasMessage: Boolean(update.message),
+      hasCallbackQuery: Boolean(update.callback_query),
+      messageText: update.message?.text,
+      chatId: update.message?.chat.id || update.callback_query?.message?.chat.id,
+    });
     const telegramMethod = (await handleMessage(update)) || (await handleCallback(update));
     if (telegramMethod) {
       await sendTelegramMethod(telegramMethod);
