@@ -91,13 +91,16 @@ async function sendTelegramMethod(methodPayload: TelegramWebhookMethod) {
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
+    const responseText = await response.text();
 
     if (!response.ok) {
-      throw new Error(`Telegram ${method} failed: ${response.status} ${await response.text()}`);
+      throw new Error(`Telegram ${method} failed: ${response.status} ${responseText}`);
     }
+    const responseBody = responseText ? (JSON.parse(responseText) as { result?: { message_id?: number } }) : {};
     console.info("Telegram webhook response sent", {
       method,
       chatId: "chat_id" in payload ? payload.chat_id : undefined,
+      messageId: responseBody.result?.message_id,
     });
   } finally {
     clearTimeout(timeout);
@@ -338,6 +341,14 @@ export async function POST(request: Request) {
     });
     const telegramMethod = (await handleMessage(update)) || (await handleCallback(update));
     if (telegramMethod) {
+      if (update.message?.text?.trim().startsWith("/start")) {
+        await sendTelegramMethod({
+          method: "sendMessage",
+          chat_id: update.message.chat.id,
+          text: "Собрались на связи. Сейчас покажу вход и документы.",
+          disable_web_page_preview: true,
+        });
+      }
       await sendTelegramMethod(telegramMethod);
       return NextResponse.json({ ok: true });
     }
