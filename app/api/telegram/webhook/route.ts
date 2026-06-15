@@ -57,8 +57,7 @@ function telegramMessage(
   chatId: number | string,
   text: string,
   inlineKeyboard: TelegramInlineKeyboardButton[][] = [
-    [{ text: "Открыть сервис", web_app: { url: `${getAppUrl()}/app` } }],
-    [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
+    [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/app` } }],
   ],
 ): TelegramWebhookMethod {
   return {
@@ -72,36 +71,45 @@ function telegramMessage(
   };
 }
 
+function telegramHtmlMessage(chatId: number | string, text: string, inlineKeyboard: TelegramInlineKeyboardButton[][]): TelegramWebhookMethod {
+  return {
+    ...telegramMessage(chatId, text, inlineKeyboard),
+    parse_mode: "HTML",
+  };
+}
+
 function requiredConsentMessage(chatId: number | string) {
-  return telegramMessage(
+  return telegramHtmlMessage(
     chatId,
     [
-      "Привет! Я бот «Собрались» — помогу открывать события, занимать места и получать уведомления.",
+      "Привет! Я бот <b>«Собрались»</b> — помогу создавать встречи, занимать места и получать уведомления.",
       "",
       "Перед началом работы обязательно ознакомьтесь с документами.",
       "",
-      "Нажимая кнопку ниже, вы подтверждаете, что ознакомились с документами и даёте согласие на обработку своего Telegram ID, имени и username для использования сервиса.",
+      `📄 <a href="${botDocumentUrl("privacy-policy.html")}">Политика конфиденциальности</a>`,
+      `📄 <a href="${botDocumentUrl("personal-data-consent.html")}">Согласие на обработку данных</a>`,
+      "",
+      "Нажимая кнопку ниже, вы подтверждаете, что ознакомились с указанными документами и даёте согласие на обработку своего Telegram ID, имени и username для использования сервиса.",
     ].join("\n"),
     [
-      [{ text: "📄 Политика конфиденциальности", url: botDocumentUrl("privacy-policy.html") }],
-      [{ text: "📄 Согласие на обработку данных", url: botDocumentUrl("personal-data-consent.html") }],
       [{ text: "✅ Принимаю и даю согласие", callback_data: "required_consent_accept" }],
     ],
   );
 }
 
 function marketingConsentMessage(chatId: number | string) {
-  return telegramMessage(
+  return telegramHtmlMessage(
     chatId,
     [
-      "💌 Хотите получать рекламную рассылку от «Собрались»?",
+      "💌 <b>Хотите получать рекламную рассылку от «Собрались»?</b>",
       "",
-      "Советы по организации встреч, акции, новости и полезные материалы. Это рекламные сообщения. Отписаться можно в любой момент.",
+      "Советы по организации встреч, акции, новости и полезные материалы. <b>Это рекламные сообщения.</b> Отписаться можно в любой момент.",
+      "",
+      `📄 <a href="${botDocumentUrl("marketing-consent.html")}">Согласие на рекламную рассылку</a>`,
       "",
       "Это необязательно — можно пропустить.",
     ].join("\n"),
     [
-      [{ text: "📄 Согласие на рекламную рассылку", url: botDocumentUrl("marketing-consent.html") }],
       [{ text: "✅ Да, согласна на рекламную рассылку", callback_data: "marketing_consent_yes" }],
       [{ text: "Нет, спасибо", callback_data: "marketing_consent_no" }],
     ],
@@ -111,8 +119,6 @@ function marketingConsentMessage(chatId: number | string) {
 function mainMenuMessage(chatId: number | string, text = "Готово. Теперь можно открыть «Собрались» и продолжить.") {
   return telegramMessage(chatId, text, [
     [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/app` } }],
-    [{ text: "Создать событие", web_app: { url: `${getAppUrl()}/app?intent=create` } }],
-    [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
   ]);
 }
 
@@ -140,7 +146,6 @@ function eventInviteMessage(chatId: number | string, eventId: string) {
     "Вас пригласили на событие в «Собрались». Откройте карточку, чтобы занять место, оставить комментарий или попасть в лист ожидания.",
     [
       [{ text: "Открыть событие", web_app: { url: `${getAppUrl()}/app?event=${encodeURIComponent(eventId)}` } }],
-      [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
     ],
   );
 }
@@ -162,7 +167,6 @@ async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMet
         "Чтобы войти в «Собрались», нажмите «Авторизоваться». Мы сохраним ваш Telegram ID, имя и username, чтобы открыть личный кабинет и присылать уведомления по событиям.",
         [
           [{ text: "Авторизоваться", callback_data: `login_confirm:${token}` }],
-          [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/profile/events` } }],
         ],
       );
     }
@@ -185,7 +189,6 @@ async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMet
   if (text.startsWith("/events")) {
     return telegramMessage(message.chat.id, "Здесь будут твои мероприятия. Быстрее открыть их можно через кнопку «Мои события» ниже.", [
       [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
-      [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/app` } }],
     ]);
   }
 
