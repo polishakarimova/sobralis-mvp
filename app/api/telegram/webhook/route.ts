@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import {
   completeTelegramLogin,
   getAppUrl,
+  getBotToken,
   type TelegramUpdate,
   upsertTelegramUser,
 } from "@/lib/telegram";
@@ -70,6 +71,33 @@ function telegramMessage(
       inline_keyboard: inlineKeyboard,
     },
   };
+}
+
+function getTelegramApiUrl(method: string) {
+  const base = (process.env.TELEGRAM_API_BASE || "https://api.telegram.org").replace(/\/$/, "");
+  return `${base}/bot${getBotToken()}/${method}`;
+}
+
+async function sendTelegramMethod(methodPayload: TelegramWebhookMethod) {
+  const { method, ...payload } = methodPayload;
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.TELEGRAM_API_TIMEOUT_MS || 1500);
+  const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 1500);
+
+  try {
+    const response = await fetch(getTelegramApiUrl(method), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Telegram ${method} failed: ${response.status} ${await response.text()}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function requiredConsentMessage(chatId: number | string) {
@@ -298,7 +326,8 @@ export async function POST(request: Request) {
     const update = (await request.json()) as TelegramUpdate;
     const telegramMethod = (await handleMessage(update)) || (await handleCallback(update));
     if (telegramMethod) {
-      return NextResponse.json(telegramMethod);
+      await sendTelegramMethod(telegramMethod);
+      return NextResponse.json({ ok: true });
     }
 
     return NextResponse.json({ ok: true });
