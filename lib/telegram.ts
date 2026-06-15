@@ -56,12 +56,18 @@ function telegramName(user: TelegramUserPayload) {
   return fullName || user.username || `Telegram ${user.id}`;
 }
 
-async function fetchTelegram(url: string, init: RequestInit) {
+function getTelegramApiUrl(method: string) {
+  const base = (process.env.TELEGRAM_API_BASE || "https://api.telegram.org").replace(/\/$/, "");
+  return `${base}/bot${getBotToken()}/${method}`;
+}
+
+async function fetchTelegram(method: string, init: RequestInit) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeoutMs = Number(process.env.TELEGRAM_API_TIMEOUT_MS || 1500);
+  const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 1500);
 
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(getTelegramApiUrl(method), { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
@@ -79,8 +85,7 @@ async function sendTelegramInlineKeyboardMessage(
 ) {
   if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
 
-  const token = getBotToken();
-  const response = await fetchTelegram(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const response = await fetchTelegram("sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -278,11 +283,10 @@ export async function sendTelegramMessage(
 ) {
   if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
 
-  const token = getBotToken();
   const appUrl = getAppUrl();
   const appPath = options.appPath?.startsWith("/") ? options.appPath : "/app";
   const primaryText = options.primaryText || "Открыть сервис";
-  const response = await fetchTelegram(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const response = await fetchTelegram("sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -305,9 +309,8 @@ export async function sendTelegramMessage(
 export async function sendTelegramLoginRequestMessage(chatId: number | string, tokenValue: string) {
   if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
 
-  const token = getBotToken();
   const appUrl = getAppUrl();
-  const response = await fetchTelegram(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const response = await fetchTelegram("sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -331,9 +334,8 @@ export async function sendTelegramLoginRequestMessage(chatId: number | string, t
 export async function sendWaitlistInviteMessage(chatId: number | string, eventTitle: string, waitlistEntryId: string) {
   if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
 
-  const token = getBotToken();
   const appUrl = getAppUrl();
-  const response = await fetchTelegram(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const response = await fetchTelegram("sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -355,8 +357,7 @@ export async function sendWaitlistInviteMessage(chatId: number | string, eventTi
 }
 
 export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
-  const token = getBotToken();
-  await fetchTelegram(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+  await fetchTelegram("answerCallbackQuery", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ callback_query_id: callbackQueryId, text }),

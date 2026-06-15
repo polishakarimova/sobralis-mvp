@@ -16,6 +16,7 @@
   --sobralis-border: rgba(43, 42, 39, 0.12);
   --sobralis-shadow: 0 24px 70px rgba(52, 44, 35, 0.11);
   --sobralis-shadow-soft: 0 18px 48px rgba(52, 44, 35, 0.08);
+  --font-onest: "Onest", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
 @theme inline {
