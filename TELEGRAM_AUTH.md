@@ -13,11 +13,15 @@
 TELEGRAM_BOT_TOKEN="123456:telegram-bot-token"
 TELEGRAM_WEBHOOK_SECRET="long-random-secret"
 TELEGRAM_BOT_USERNAME="sobraliss_bot"
+TELEGRAM_API_TIMEOUT_MS="1500"
+TELEGRAM_API_BASE="https://api.telegram.org"
 APP_URL="https://sobralisy.ru"
 ADMIN_TELEGRAM_IDS=""
 ```
 
 `TELEGRAM_WEBHOOK_SECRET` должен быть длинной случайной строкой. Он передаётся Telegram при `setWebhook`, а webhook route проверяет его через заголовок `x-telegram-bot-api-secret-token`.
+
+`TELEGRAM_API_BASE` можно заменить на proxy/base URL, если VPS не может напрямую подключаться к `api.telegram.org`. `TELEGRAM_API_TIMEOUT_MS` держит исходящие Telegram-запросы короткими, чтобы приложение не зависало при сетевых проблемах.
 
 ## Prisma Models
 
