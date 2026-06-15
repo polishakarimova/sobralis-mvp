@@ -71,6 +71,10 @@ printf '%s\n' "$remote_sha" > "$new_release/.release-sha"
 ln -sfn "$new_release" "$CURRENT_LINK"
 systemctl restart sobralis.service
 systemctl is-active sobralis.service
+if systemctl list-unit-files sobralis-telegram-poller.service >/dev/null 2>&1; then
+  systemctl restart sobralis-telegram-poller.service
+  systemctl is-active sobralis-telegram-poller.service
+fi
 
 if [ -x /usr/local/sbin/sobralis-clean-releases.sh ]; then
   KEEP_RELEASES="$KEEP_RELEASES" /usr/local/sbin/sobralis-clean-releases.sh || true
