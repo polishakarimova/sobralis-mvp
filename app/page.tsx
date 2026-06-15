@@ -888,13 +888,24 @@ export default function App() {
     setScreen("dashboard");
   }
 
-  function startCreate() {
-    setAfterAuthScreen("kind");
-    if (!cabinetUser) {
-      setScreen("account");
-      return;
+  async function logout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (logoutError) {
+      console.error("Logout failed", logoutError);
     }
-    setScreen("kind");
+
+    clearPendingTelegramLogin();
+    localStorage.removeItem(PROFILE_KEY);
+    setCabinetUser(null);
+    setEvents([]);
+    setActiveEventId(null);
+    setGuestName("");
+    setGuestComment("");
+    setGuestReservation(null);
+    setNotice("Вы вышли из кабинета.");
+    setError("");
+    setScreen("home");
   }
 
   function chooseKind(kind: EventKind) {
@@ -1261,9 +1272,9 @@ export default function App() {
         }}
       />
       <div className="relative z-10">
-        <Header goHome={goHome} openDashboard={openDashboard} startCreate={startCreate} />
+        <Header goHome={goHome} openDashboard={openDashboard} cabinetUser={cabinetUser} logout={logout} />
 
-        {screen === "home" && <Home startCreate={startCreate} openExample={() => window.location.assign(IS_DEVELOPMENT ? "/app?devEvent=1" : "/event-card-preview")} />}
+        {screen === "home" && <Home />}
         {screen === "account" && <Account goHome={goHome} onAuthenticated={applyAuthenticatedUser} returnTo={afterAuthScreen === "kind" ? "/app?intent=create" : "/profile/events"} />}
         {screen === "dashboard" && <Dashboard events={events} isLoading={isLoadingEvents} openEvent={openEvent} deleteEvent={deleteEvent} createNew={() => setScreen("kind")} />}
         {screen === "kind" && <KindPicker goBack={() => setScreen("home")} chooseKind={chooseKind} />}
@@ -1357,7 +1368,7 @@ export default function App() {
   );
 }
 
-function Header({ goHome, openDashboard, startCreate }: { goHome: () => void; openDashboard: () => void; startCreate: () => void }) {
+function Header({ goHome, openDashboard, cabinetUser, logout }: { goHome: () => void; openDashboard: () => void; cabinetUser: CabinetUser | null; logout: () => void }) {
   return (
     <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-[26px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 px-3 py-2.5 shadow-[0_18px_50px_rgba(52,44,35,0.10)] backdrop-blur-2xl sm:px-4">
@@ -1365,19 +1376,21 @@ function Header({ goHome, openDashboard, startCreate }: { goHome: () => void; op
           <BrandLogoApproved caption="Красиво собрать своих" symbolSize={42} compact />
         </button>
         <div className="flex shrink-0 items-center gap-2">
-          <button onClick={openDashboard} className="hidden rounded-[18px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/75 px-4 py-2.5 text-sm font-semibold text-[#2b2a27] transition hover:-translate-y-0.5 hover:border-[#c59a55]/50 hover:shadow-[0_10px_24px_rgba(52,44,35,0.10)] sm:block">
-            Мои события
+          <button onClick={openDashboard} className="rounded-[18px] bg-[#7e8466] px-4 py-2.5 text-sm font-semibold text-[#fffdf8] shadow-[0_12px_26px_rgba(89,96,71,0.22)] transition hover:-translate-y-0.5 hover:bg-[#596047] sm:px-5">
+            {cabinetUser ? "Личный кабинет" : "Войти"}
           </button>
-          <button onClick={startCreate} className="rounded-[18px] bg-[#7e8466] px-4 py-2.5 text-sm font-semibold text-[#fffdf8] shadow-[0_12px_26px_rgba(89,96,71,0.22)] transition hover:-translate-y-0.5 hover:bg-[#596047] sm:px-5">
-            Создать
-          </button>
+          {cabinetUser && (
+            <button onClick={logout} className="rounded-[18px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/75 px-3 py-2.5 text-sm font-semibold text-[#7c746a] transition hover:-translate-y-0.5 hover:border-[#c59a55]/50 hover:text-[#2b2a27] hover:shadow-[0_10px_24px_rgba(52,44,35,0.10)] sm:px-4">
+              Выйти
+            </button>
+          )}
         </div>
       </div>
     </header>
   );
 }
 
-function Home({ startCreate, openExample }: { startCreate: () => void; openExample: () => void }) {
+function Home() {
   return (
     <section className="mx-auto grid min-h-[calc(100svh-92px)] max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12 lg:py-10">
       <div className="max-w-xl text-center lg:text-left">
@@ -1390,14 +1403,6 @@ function Home({ startCreate, openExample }: { startCreate: () => void; openExamp
         <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-[#7c746a] sm:text-lg sm:leading-8 lg:mx-0">
           Гости, места, оплаты и напоминания — в одной ссылке.
         </p>
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-          <button onClick={startCreate} className="rounded-[22px] bg-[#7e8466] px-7 py-4 text-base font-semibold text-[#fffdf8] shadow-[0_18px_34px_rgba(89,96,71,0.24)] transition hover:-translate-y-0.5 hover:bg-[#596047]">
-            Создать событие
-          </button>
-          <button onClick={openExample} className="rounded-[22px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/76 px-7 py-4 text-base font-semibold text-[#2b2a27] shadow-[0_14px_34px_rgba(52,44,35,0.08)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/50">
-            Посмотреть пример
-          </button>
-        </div>
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">
           завтраки · бани · ужины · камерные встречи
         </p>
@@ -1644,7 +1649,7 @@ function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew }: { e
           <h1 className="sobralis-display mt-4 text-[2.8rem] leading-none sm:text-[4rem]">Мои события</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base">Здесь живут ваши карточки-приглашения: гости, места, ожидание и ссылка для отправки.</p>
         </div>
-        <button onClick={createNew} className="sobralis-button-primary shrink-0">Создать событие</button>
+        {events.length > 0 && <button onClick={createNew} className="sobralis-button-primary shrink-0">Создать событие</button>}
       </div>
       <div className="mt-5 grid gap-4 sm:mt-7">
         {isLoading && <EmptyState title="Загружаю события" text="Сейчас подтяну список из базы." />}
