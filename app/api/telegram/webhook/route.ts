@@ -20,7 +20,7 @@ type TelegramInlineKeyboardButton = {
 };
 
 type TelegramWebhookMethod = {
-  method: "sendMessage" | "editMessageText" | "answerCallbackQuery";
+  method: "sendMessage" | "editMessageText" | "editMessageReplyMarkup" | "deleteMessage" | "answerCallbackQuery";
   chat_id?: number | string;
   message_id?: number;
   callback_query_id?: string;
@@ -31,6 +31,8 @@ type TelegramWebhookMethod = {
     inline_keyboard: TelegramInlineKeyboardButton[][];
   };
 };
+
+type TelegramWebhookResult = TelegramWebhookMethod | { methods: TelegramWebhookMethod[] };
 
 function checkWebhookSecret(request: Request) {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -76,6 +78,41 @@ function telegramHtmlMessage(chatId: number | string, text: string, inlineKeyboa
   return {
     ...telegramMessage(chatId, text, inlineKeyboard),
     parse_mode: "HTML",
+  };
+}
+
+function telegramMethods(methods: TelegramWebhookMethod[]): TelegramWebhookResult {
+  return { methods };
+}
+
+function answerCallbackQuery(callbackQueryId: string, text: string): TelegramWebhookMethod {
+  return {
+    method: "answerCallbackQuery",
+    callback_query_id: callbackQueryId,
+    text,
+  };
+}
+
+function editMessageButtons(
+  chatId: number | string,
+  messageId: number,
+  inlineKeyboard: TelegramInlineKeyboardButton[][],
+): TelegramWebhookMethod {
+  return {
+    method: "editMessageReplyMarkup",
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: {
+      inline_keyboard: inlineKeyboard,
+    },
+  };
+}
+
+function deleteTelegramMessage(chatId: number | string, messageId: number): TelegramWebhookMethod {
+  return {
+    method: "deleteMessage",
+    chat_id: chatId,
+    message_id: messageId,
   };
 }
 
@@ -151,7 +188,7 @@ function eventInviteMessage(chatId: number | string, eventId: string) {
   );
 }
 
-async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMethod | undefined> {
+async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookResult | undefined> {
   const message = update.message;
   if (!message?.from) return;
   if (!message.text) return requiredConsentMessage(message.chat.id);
@@ -199,7 +236,7 @@ async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMet
   );
 }
 
-async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMethod | undefined> {
+async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookResult | undefined> {
   const callback = update.callback_query;
   if (!callback) return;
 
@@ -210,10 +247,21 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
       .then((user) => recordRequiredBotConsents(user.id))
       .catch((error) => console.error("Telegram required consent save error", error));
 
-    if (callback.message?.chat.id) {
-      return marketingConsentMessage(callback.message.chat.id);
+    if (callback.message?.chat.id && callback.message.message_id) {
+      return telegramMethods([
+        answerCallbackQuery(callback.id, "Готово"),
+        editMessageButtons(callback.message.chat.id, callback.message.message_id, [
+          [{ text: "✅ Готово", callback_data: "consent_step_done" }],
+        ]),
+        deleteTelegramMessage(callback.message.chat.id, callback.message.message_id),
+        marketingConsentMessage(callback.message.chat.id),
+      ]);
     }
-    return;
+
+    if (callback.message?.chat.id) {
+      return telegramMethods([answerCallbackQuery(callback.id, "Готово"), marketingConsentMessage(callback.message.chat.id)]);
+    }
+    return answerCallbackQuery(callback.id, "Готово");
   }
 
   if (data === "marketing_consent_yes" || data === "marketing_consent_no") {
@@ -222,23 +270,33 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
       .then((user) => recordConsent(user.id, ConsentType.marketing_offers, accepted))
       .catch((error) => console.error("Telegram marketing consent save error", error));
 
-    if (callback.message?.chat.id) {
-      return mainMenuMessage(
-        callback.message.chat.id,
-        accepted
-          ? "Спасибо. Рекламная рассылка подключена. Теперь можно открыть «Собрались»."
-          : "Хорошо, рекламную рассылку пропускаем. Теперь можно открыть «Собрались».",
-      );
+    const finalText = accepted
+      ? "Спасибо. Рекламная рассылка подключена. Теперь можно вернуться в приложение."
+      : "Спасибо. Рекламная рассылка отключена. Теперь можно вернуться в приложение.";
+
+    if (callback.message?.chat.id && callback.message.message_id) {
+      return telegramMethods([
+        answerCallbackQuery(callback.id, "Спасибо за ответ"),
+        editMessageButtons(callback.message.chat.id, callback.message.message_id, [
+          [{ text: "✅ Спасибо за ответ", callback_data: "consent_step_done" }],
+        ]),
+        deleteTelegramMessage(callback.message.chat.id, callback.message.message_id),
+        mainMenuMessage(callback.message.chat.id, finalText),
+      ]);
     }
-    return;
+
+    if (callback.message?.chat.id) {
+      return telegramMethods([answerCallbackQuery(callback.id, "Спасибо за ответ"), mainMenuMessage(callback.message.chat.id, finalText)]);
+    }
+    return answerCallbackQuery(callback.id, "Спасибо за ответ");
+  }
+
+  if (data === "consent_step_done") {
+    return answerCallbackQuery(callback.id, "Готово");
   }
 
   if (data === "login_already_confirmed") {
-    return {
-      method: "answerCallbackQuery",
-      callback_query_id: callback.id,
-      text: "Вы уже авторизованы",
-    };
+    return answerCallbackQuery(callback.id, "Вы уже авторизованы");
   }
 
   const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
@@ -306,18 +364,10 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
   if (data.startsWith("waitlist_skip:")) {
     const waitlistEntryId = data.replace("waitlist_skip:", "");
     const result = await skipWaitlistEntry(waitlistEntryId, user.id);
-    return {
-      method: "answerCallbackQuery",
-      callback_query_id: callback.id,
-      text: result.ok ? "Приглашение пропущено" : result.error,
-    };
+    return answerCallbackQuery(callback.id, result.ok ? "Приглашение пропущено" : result.error);
   }
 
-  return {
-    method: "answerCallbackQuery",
-    callback_query_id: callback.id,
-    text: "Готово",
-  };
+  return answerCallbackQuery(callback.id, "Готово");
 }
 
 export async function POST(request: Request) {
@@ -337,8 +387,8 @@ export async function POST(request: Request) {
     const telegramMethod = (await handleMessage(update)) || (await handleCallback(update));
     if (telegramMethod) {
       console.info("Telegram webhook method returned", {
-        method: telegramMethod.method,
-        chatId: telegramMethod.chat_id,
+        method: "methods" in telegramMethod ? telegramMethod.methods.map((method) => method.method).join(",") : telegramMethod.method,
+        chatId: "methods" in telegramMethod ? telegramMethod.methods[0]?.chat_id : telegramMethod.chat_id,
       });
       return NextResponse.json(telegramMethod);
     }

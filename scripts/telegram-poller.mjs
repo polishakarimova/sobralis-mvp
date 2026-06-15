@@ -104,13 +104,29 @@ async function sendWebhookMethod(payload) {
   await telegram(method, body);
 }
 
+async function sendWebhookPayload(payload) {
+  if (!payload) return;
+
+  const methods = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload.methods)
+      ? payload.methods
+      : [payload];
+
+  for (const methodPayload of methods) {
+    await sendWebhookMethod(methodPayload);
+  }
+}
+
 async function processUpdate(update) {
   const startedAt = Date.now();
   const methodPayload = await callInternalWebhook(update);
-  await sendWebhookMethod(methodPayload);
+  await sendWebhookPayload(methodPayload);
   console.info("Telegram poller processed update", {
     updateId: update.update_id,
-    method: methodPayload?.method || "none",
+    method: Array.isArray(methodPayload?.methods)
+      ? methodPayload.methods.map((payload) => payload.method).join(",")
+      : methodPayload?.method || "none",
     durationMs: Date.now() - startedAt,
   });
 }
