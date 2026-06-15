@@ -18,6 +18,7 @@
     "check:concurrent-join:timeweb": "node scripts/with-timeweb-proxy.mjs npx tsx scripts/check-concurrent-join-flow.ts",
     "telegram:menu": "node scripts/setup-telegram-menu.mjs",
     "telegram:login-start:check": "node scripts/check-telegram-login-start.mjs",
+    "telegram:poller": "node scripts/telegram-poller.mjs",
     "telegram:webhook": "node scripts/setup-telegram-webhook.mjs",
     "telegram:webhook:check": "node scripts/check-telegram-webhook-route.mjs",
     "prisma:generate": "prisma generate",
