@@ -114,7 +114,15 @@ async function sendWebhookPayload(payload) {
       : [payload];
 
   for (const methodPayload of methods) {
-    await sendWebhookMethod(methodPayload);
+    try {
+      await sendWebhookMethod(methodPayload);
+    } catch (error) {
+      console.error("Telegram poller method error", {
+        method: methodPayload?.method || "none",
+        error,
+      });
+      if (methodPayload?.method === "sendMessage") throw error;
+    }
   }
 }
 
