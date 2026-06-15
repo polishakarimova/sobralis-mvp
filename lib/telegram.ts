@@ -19,7 +19,7 @@ type TelegramMessage = {
 type TelegramCallbackQuery = {
   id: string;
   from: TelegramUserPayload;
-  message?: { chat: { id: number | string } };
+  message?: { message_id?: number; chat: { id: number | string } };
   data?: string;
 };
 

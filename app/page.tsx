@@ -32,6 +32,14 @@ type TelegramWebApp = {
   expand?: () => void;
   close?: () => void;
   openTelegramLink?: (url: string) => void;
+  showPopup?: (
+    params: {
+      title?: string;
+      message: string;
+      buttons?: Array<{ id?: string; type?: "default" | "ok" | "close" | "cancel" | "destructive"; text?: string }>;
+    },
+    callback?: (buttonId: string) => void,
+  ) => void;
 };
 
 declare global {
@@ -209,12 +217,32 @@ function getTelegramWebApp() {
   return window.Telegram?.WebApp;
 }
 
-function openTelegramAuthLink(botUrl: string, pendingWindow: Window | null, shouldOpenInCurrentWindow: boolean) {
+function showTelegramPopup(webApp: TelegramWebApp, message: string) {
+  return new Promise<void>((resolve) => {
+    if (!webApp.showPopup) {
+      resolve();
+      return;
+    }
+
+    webApp.showPopup(
+      {
+        title: "Авторизация",
+        message,
+        buttons: [{ id: "ok", type: "ok", text: "OK" }],
+      },
+      () => resolve(),
+    );
+  });
+}
+
+async function openTelegramAuthLink(botUrl: string, pendingWindow: Window | null, shouldOpenInCurrentWindow: boolean) {
   const webApp = getTelegramWebApp();
 
   if (webApp?.openTelegramLink) {
+    await showTelegramPopup(webApp, "Сейчас откроется бот «Собрались». В нём нажмите «Авторизоваться», затем «Вернуться в приложение».");
     webApp.openTelegramLink(botUrl);
-    window.setTimeout(() => webApp.close?.(), 1800);
+    window.setTimeout(() => webApp.close?.(), 350);
+    window.setTimeout(() => webApp.close?.(), 1200);
     return "telegram-webapp" as const;
   }
 
@@ -1192,7 +1220,7 @@ export default function App() {
         source: "event",
       });
 
-      const openMode = openTelegramAuthLink(payload.data.botUrl, pendingWindow, shouldOpenInCurrentWindow);
+      const openMode = await openTelegramAuthLink(payload.data.botUrl, pendingWindow, shouldOpenInCurrentWindow);
       if (openMode === "current-window") {
         return;
       }
@@ -1554,7 +1582,7 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
         source: "account",
       });
 
-      const openMode = openTelegramAuthLink(payload.data.botUrl, pendingWindow, shouldOpenInCurrentWindow);
+      const openMode = await openTelegramAuthLink(payload.data.botUrl, pendingWindow, shouldOpenInCurrentWindow);
       if (openMode === "current-window") {
         return;
       }

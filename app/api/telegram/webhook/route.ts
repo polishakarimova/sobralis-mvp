@@ -20,8 +20,9 @@ type TelegramInlineKeyboardButton = {
 };
 
 type TelegramWebhookMethod = {
-  method: "sendMessage" | "answerCallbackQuery";
+  method: "sendMessage" | "editMessageText" | "answerCallbackQuery";
   chat_id?: number | string;
+  message_id?: number;
   callback_query_id?: string;
   text?: string;
   parse_mode?: "HTML";
@@ -232,29 +233,55 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
     return;
   }
 
+  if (data === "login_already_confirmed") {
+    return {
+      method: "answerCallbackQuery",
+      callback_query_id: callback.id,
+      text: "Вы уже авторизованы",
+    };
+  }
+
   const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
 
   if (data.startsWith("login_confirm:")) {
     const token = data.replace("login_confirm:", "");
     const completed = await completeTelegramLogin(token, user.id);
+    const completedReturnTo = completed.returnTo || "/profile/events";
+
+    if (callback.message?.chat.id && callback.message.message_id) {
+      return {
+        method: "editMessageText",
+        chat_id: callback.message.chat.id,
+        message_id: callback.message.message_id,
+        text: completed.ok
+          ? "✅ Вы авторизованы.\n\nТеперь можно вернуться в приложение и продолжить."
+          : "Не получилось подтвердить вход: ссылка устарела. Вернитесь на сайт и нажмите «Авторизоваться» ещё раз.",
+        disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: completed.ok
+            ? [
+                [{ text: "✅ Вы авторизованы", callback_data: "login_already_confirmed" }],
+                [
+                  {
+                    text: completedReturnTo.startsWith("/app?event=") ? "Вернуться к событию" : "Вернуться в приложение",
+                    web_app: { url: `${getAppUrl()}${appendLoginToken(completedReturnTo, token)}` },
+                  },
+                ],
+              ]
+            : [[{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/profile/events` } }]],
+        },
+      };
+    }
 
     if (callback.message?.chat.id) {
-      return telegramMessage(
-        callback.message.chat.id,
-        completed.ok
-          ? "Готово, вход подтверждён. Нажмите «Вернуться в приложение», и «Собрались» откроет нужный экран."
-          : "Не получилось подтвердить вход: ссылка устарела. Вернитесь на сайт и нажмите «Авторизоваться» ещё раз.",
-        completed.ok
-          ? [
-              [
-                {
-                  text: completed.returnTo?.startsWith("/app?event=") ? "Вернуться к событию" : "Вернуться в приложение",
-                  web_app: { url: `${getAppUrl()}${appendLoginToken(completed.returnTo, token)}` },
-                },
-              ],
-            ]
-          : [[{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/profile/events` } }]],
-      );
+      return telegramMessage(callback.message.chat.id, "✅ Вы авторизованы. Теперь можно вернуться в приложение и продолжить.", [
+        [
+          {
+            text: completedReturnTo.startsWith("/app?event=") ? "Вернуться к событию" : "Вернуться в приложение",
+            web_app: { url: `${getAppUrl()}${appendLoginToken(completedReturnTo, token)}` },
+          },
+        ],
+      ]);
     }
     return;
   }
