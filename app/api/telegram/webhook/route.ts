@@ -116,30 +116,6 @@ function mainMenuMessage(chatId: number | string, text = "Готово. Тепе
   ]);
 }
 
-async function hasActiveConsent(userId: string, type: ConsentType) {
-  const consent = await prisma.consent.findFirst({
-    where: {
-      userId,
-      type,
-      value: true,
-      revokedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-
-  return Boolean(consent);
-}
-
-async function hasRequiredBotConsents(userId: string) {
-  const [hasTerms, hasPersonalData] = await Promise.all([
-    hasActiveConsent(userId, ConsentType.service_terms),
-    hasActiveConsent(userId, ConsentType.personal_data),
-  ]);
-
-  return hasTerms && hasPersonalData;
-}
-
 async function recordConsent(userId: string, type: ConsentType, value: boolean) {
   await prisma.consent.create({
     data: {
@@ -158,19 +134,10 @@ async function recordRequiredBotConsents(userId: string) {
   ]);
 }
 
-async function eventInviteMessage(chatId: number | string, eventId: string) {
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: { title: true, date: true, startTime: true, place: { select: { title: true } } },
-  });
-
-  if (!event) {
-    return telegramMessage(chatId, "Не нашла это событие. Попросите организатора отправить новую ссылку.");
-  }
-
+function eventInviteMessage(chatId: number | string, eventId: string) {
   return telegramMessage(
     chatId,
-    `Вас пригласили на «${event.title}». Откройте карточку события, чтобы занять место, оставить комментарий или попасть в лист ожидания.`,
+    "Вас пригласили на событие в «Собрались». Откройте карточку, чтобы занять место, оставить комментарий или попасть в лист ожидания.",
     [
       [{ text: "Открыть событие", web_app: { url: `${getAppUrl()}/app?event=${encodeURIComponent(eventId)}` } }],
       [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
@@ -199,24 +166,13 @@ async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMet
       );
     }
 
-    const user = await upsertTelegramUser(message.from, message.chat.id);
-
     if (payload.startsWith("event_")) {
       const eventId = payload.replace("event_", "");
       return eventInviteMessage(message.chat.id, eventId);
     }
 
-    if (await hasRequiredBotConsents(user.id)) {
-      return mainMenuMessage(
-        message.chat.id,
-        "С возвращением в «Собрались». Можно открыть приложение, создать событие или посмотреть свои события.",
-      );
-    }
-
     return requiredConsentMessage(message.chat.id);
   }
-
-  await upsertTelegramUser(message.from, message.chat.id);
 
   if (text.startsWith("/help")) {
     return telegramMessage(
@@ -242,11 +198,12 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
   const callback = update.callback_query;
   if (!callback) return;
 
-  const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
   const data = callback.data || "";
 
   if (data === "required_consent_accept") {
-    await recordRequiredBotConsents(user.id);
+    void upsertTelegramUser(callback.from, callback.message?.chat.id)
+      .then((user) => recordRequiredBotConsents(user.id))
+      .catch((error) => console.error("Telegram required consent save error", error));
 
     if (callback.message?.chat.id) {
       return marketingConsentMessage(callback.message.chat.id);
@@ -256,7 +213,9 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
 
   if (data === "marketing_consent_yes" || data === "marketing_consent_no") {
     const accepted = data === "marketing_consent_yes";
-    await recordConsent(user.id, ConsentType.marketing_offers, accepted);
+    void upsertTelegramUser(callback.from, callback.message?.chat.id)
+      .then((user) => recordConsent(user.id, ConsentType.marketing_offers, accepted))
+      .catch((error) => console.error("Telegram marketing consent save error", error));
 
     if (callback.message?.chat.id) {
       return mainMenuMessage(
@@ -268,6 +227,8 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMe
     }
     return;
   }
+
+  const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
 
   if (data.startsWith("login_confirm:")) {
     const token = data.replace("login_confirm:", "");
