@@ -23,6 +23,13 @@ type TelegramCallbackQuery = {
   data?: string;
 };
 
+type TelegramInlineKeyboardButton = {
+  text: string;
+  callback_data?: string;
+  url?: string;
+  web_app?: { url: string };
+};
+
 export type TelegramUpdate = {
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
@@ -57,6 +64,38 @@ async function fetchTelegram(url: string, init: RequestInit) {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function botDocumentUrl(fileName: string) {
+  return `${getAppUrl()}/bot-documents/${fileName}`;
+}
+
+async function sendTelegramInlineKeyboardMessage(
+  chatId: number | string,
+  text: string,
+  inlineKeyboard: TelegramInlineKeyboardButton[][],
+  options: { parseMode?: "HTML" } = {},
+) {
+  if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
+
+  const token = getBotToken();
+  const response = await fetchTelegram(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: options.parseMode,
+      disable_web_page_preview: true,
+      reply_markup: {
+        inline_keyboard: inlineKeyboard,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Telegram sendMessage failed: ${response.status} ${await response.text()}`);
   }
 }
 
@@ -122,6 +161,53 @@ export async function upsertTelegramUser(user: TelegramUserPayload, chatId?: num
   }
 
   return savedUser;
+}
+
+export async function sendTelegramRequiredConsentMessage(chatId: number | string) {
+  await sendTelegramInlineKeyboardMessage(
+    chatId,
+    [
+      "Привет! Я бот «Собрались» — помогу открывать события, занимать места и получать уведомления.",
+      "",
+      "Перед началом работы обязательно ознакомьтесь:",
+      "",
+      `📄 <a href="${botDocumentUrl("privacy-policy.html")}">Политика конфиденциальности</a>`,
+      `📄 <a href="${botDocumentUrl("personal-data-consent.html")}">Согласие на обработку персональных данных</a>`,
+      "",
+      "Нажимая кнопку ниже, вы подтверждаете, что ознакомились с документами и даёте согласие на обработку своего Telegram ID, имени и username для использования сервиса.",
+    ].join("\n"),
+    [[{ text: "✅ Принимаю и даю согласие", callback_data: "required_consent_accept" }]],
+    { parseMode: "HTML" },
+  );
+}
+
+export async function sendTelegramMarketingConsentMessage(chatId: number | string) {
+  await sendTelegramInlineKeyboardMessage(
+    chatId,
+    [
+      "💌 Хотите получать рекламную рассылку от «Собрались»?",
+      "",
+      "Советы по организации встреч, акции, новости и полезные материалы. Это рекламные сообщения. Отписаться можно в любой момент.",
+      "",
+      `📄 <a href="${botDocumentUrl("marketing-consent.html")}">Согласие на рекламную рассылку</a>`,
+      "",
+      "Это необязательно — можно пропустить.",
+    ].join("\n"),
+    [
+      [{ text: "✅ Да, согласна на рекламную рассылку", callback_data: "marketing_consent_yes" }],
+      [{ text: "Нет, спасибо", callback_data: "marketing_consent_no" }],
+    ],
+    { parseMode: "HTML" },
+  );
+}
+
+export async function sendTelegramMainMenuMessage(chatId: number | string, text = "Готово. Теперь можно открыть «Собрались» и продолжить.") {
+  const appUrl = getAppUrl();
+  await sendTelegramInlineKeyboardMessage(chatId, text, [
+    [{ text: "Открыть приложение", web_app: { url: `${appUrl}/app` } }],
+    [{ text: "Создать событие", web_app: { url: `${appUrl}/app?intent=create` } }],
+    [{ text: "Мои события", web_app: { url: `${appUrl}/profile/events` } }],
+  ]);
 }
 
 export async function completeTelegramLogin(token: string, userId: string) {

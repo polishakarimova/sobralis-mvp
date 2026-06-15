@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 
+import { ConsentType } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,10 @@ import {
   answerCallbackQuery,
   completeTelegramLogin,
   sendTelegramLoginRequestMessage,
+  sendTelegramMainMenuMessage,
+  sendTelegramMarketingConsentMessage,
   sendTelegramMessage,
+  sendTelegramRequiredConsentMessage,
   type TelegramUpdate,
   upsertTelegramUser,
 } from "@/lib/telegram";
@@ -50,6 +54,30 @@ async function safeSendTelegramLoginRequestMessage(chatId: number | string, toke
   }
 }
 
+async function safeSendTelegramRequiredConsentMessage(chatId: number | string) {
+  try {
+    await sendTelegramRequiredConsentMessage(chatId);
+  } catch (error) {
+    console.error("Telegram required consent message error", error);
+  }
+}
+
+async function safeSendTelegramMarketingConsentMessage(chatId: number | string) {
+  try {
+    await sendTelegramMarketingConsentMessage(chatId);
+  } catch (error) {
+    console.error("Telegram marketing consent message error", error);
+  }
+}
+
+async function safeSendTelegramMainMenuMessage(chatId: number | string, text?: string) {
+  try {
+    await sendTelegramMainMenuMessage(chatId, text);
+  } catch (error) {
+    console.error("Telegram main menu message error", error);
+  }
+}
+
 function appendLoginToken(returnTo: string, token: string) {
   const fallback = "/profile/events";
   const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : fallback;
@@ -57,6 +85,48 @@ function appendLoginToken(returnTo: string, token: string) {
   const separator = pathAndSearch.includes("?") ? "&" : "?";
   const withToken = `${pathAndSearch}${separator}loginToken=${encodeURIComponent(token)}`;
   return hash ? `${withToken}#${hash}` : withToken;
+}
+
+async function hasActiveConsent(userId: string, type: ConsentType) {
+  const consent = await prisma.consent.findFirst({
+    where: {
+      userId,
+      type,
+      value: true,
+      revokedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+
+  return Boolean(consent);
+}
+
+async function hasRequiredBotConsents(userId: string) {
+  const [hasTerms, hasPersonalData] = await Promise.all([
+    hasActiveConsent(userId, ConsentType.service_terms),
+    hasActiveConsent(userId, ConsentType.personal_data),
+  ]);
+
+  return hasTerms && hasPersonalData;
+}
+
+async function recordConsent(userId: string, type: ConsentType, value: boolean) {
+  await prisma.consent.create({
+    data: {
+      userId,
+      type,
+      value,
+    },
+  });
+}
+
+async function recordRequiredBotConsents(userId: string) {
+  await prisma.$transaction([
+    prisma.consent.create({ data: { userId, type: ConsentType.service_terms, value: true } }),
+    prisma.consent.create({ data: { userId, type: ConsentType.personal_data, value: true } }),
+    prisma.consent.create({ data: { userId, type: ConsentType.telegram_notifications, value: true } }),
+  ]);
 }
 
 async function sendEventInvite(chatId: number | string, eventId: string) {
@@ -92,7 +162,7 @@ async function handleMessage(update: TelegramUpdate) {
       return;
     }
 
-    await upsertTelegramUser(message.from, message.chat.id);
+    const user = await upsertTelegramUser(message.from, message.chat.id);
 
     if (payload.startsWith("event_")) {
       const eventId = payload.replace("event_", "");
@@ -100,10 +170,15 @@ async function handleMessage(update: TelegramUpdate) {
       return;
     }
 
-    await safeSendTelegramMessage(
-      message.chat.id,
-      "Привет! Я бот сервиса «Собрались». Через меня удобно открывать события, занимать места и получать уведомления по листу ожидания.",
-    );
+    if (await hasRequiredBotConsents(user.id)) {
+      await safeSendTelegramMainMenuMessage(
+        message.chat.id,
+        "С возвращением в «Собрались». Можно открыть приложение, создать событие или посмотреть свои события.",
+      );
+      return;
+    }
+
+    await safeSendTelegramRequiredConsentMessage(message.chat.id);
     return;
   }
 
@@ -137,6 +212,32 @@ async function handleCallback(update: TelegramUpdate) {
 
   const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
   const data = callback.data || "";
+
+  if (data === "required_consent_accept") {
+    await recordRequiredBotConsents(user.id);
+    await safeAnswerCallbackQuery(callback.id, "Согласие сохранено");
+
+    if (callback.message?.chat.id) {
+      await safeSendTelegramMarketingConsentMessage(callback.message.chat.id);
+    }
+    return;
+  }
+
+  if (data === "marketing_consent_yes" || data === "marketing_consent_no") {
+    const accepted = data === "marketing_consent_yes";
+    await recordConsent(user.id, ConsentType.marketing_offers, accepted);
+    await safeAnswerCallbackQuery(callback.id, accepted ? "Рекламная рассылка включена" : "Хорошо, рекламную рассылку не включаем");
+
+    if (callback.message?.chat.id) {
+      await safeSendTelegramMainMenuMessage(
+        callback.message.chat.id,
+        accepted
+          ? "Спасибо. Рекламная рассылка подключена. Теперь можно открыть «Собрались»."
+          : "Хорошо, рекламную рассылку пропускаем. Теперь можно открыть «Собрались».",
+      );
+    }
+    return;
+  }
 
   if (data.startsWith("login_confirm:")) {
     const token = data.replace("login_confirm:", "");
