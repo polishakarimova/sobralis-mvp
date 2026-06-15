@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import {
   completeTelegramLogin,
   getAppUrl,
-  getBotToken,
   type TelegramUpdate,
   upsertTelegramUser,
 } from "@/lib/telegram";
@@ -71,46 +70,6 @@ function telegramMessage(
       inline_keyboard: inlineKeyboard,
     },
   };
-}
-
-function getTelegramApiUrl(method: string) {
-  const base = (process.env.TELEGRAM_API_BASE || "https://api.telegram.org").replace(/\/$/, "");
-  return `${base}/bot${getBotToken()}/${method}`;
-}
-
-async function sendTelegramMethod(methodPayload: TelegramWebhookMethod) {
-  const { method, ...payload } = methodPayload;
-  const controller = new AbortController();
-  const timeoutMs = Number(process.env.TELEGRAM_API_TIMEOUT_MS || 1500);
-  const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 1500);
-
-  try {
-    const response = await fetch(getTelegramApiUrl(method), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`Telegram ${method} failed: ${response.status} ${responseText}`);
-    }
-    const responseBody = responseText ? (JSON.parse(responseText) as { result?: { message_id?: number } }) : {};
-    console.info("Telegram webhook response sent", {
-      method,
-      chatId: "chat_id" in payload ? payload.chat_id : undefined,
-      messageId: responseBody.result?.message_id,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function dispatchTelegramMethod(methodPayload: TelegramWebhookMethod) {
-  void sendTelegramMethod(methodPayload).catch((error) => {
-    console.error("Telegram webhook response send error", error);
-  });
 }
 
 function requiredConsentMessage(chatId: number | string) {
@@ -347,8 +306,11 @@ export async function POST(request: Request) {
     });
     const telegramMethod = (await handleMessage(update)) || (await handleCallback(update));
     if (telegramMethod) {
-      dispatchTelegramMethod(telegramMethod);
-      return NextResponse.json({ ok: true });
+      console.info("Telegram webhook method returned", {
+        method: telegramMethod.method,
+        chatId: telegramMethod.chat_id,
+      });
+      return NextResponse.json(telegramMethod);
     }
 
     return NextResponse.json({ ok: true });
