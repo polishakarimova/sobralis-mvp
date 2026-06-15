@@ -5,17 +5,31 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import {
-  answerCallbackQuery,
   completeTelegramLogin,
-  sendTelegramLoginRequestMessage,
-  sendTelegramMainMenuMessage,
-  sendTelegramMarketingConsentMessage,
-  sendTelegramMessage,
-  sendTelegramRequiredConsentMessage,
+  getAppUrl,
   type TelegramUpdate,
   upsertTelegramUser,
 } from "@/lib/telegram";
 import { acceptWaitlistEntry, skipWaitlistEntry } from "@/lib/waitlist";
+
+type TelegramInlineKeyboardButton = {
+  text: string;
+  callback_data?: string;
+  url?: string;
+  web_app?: { url: string };
+};
+
+type TelegramWebhookMethod = {
+  method: "sendMessage" | "answerCallbackQuery";
+  chat_id?: number | string;
+  callback_query_id?: string;
+  text?: string;
+  parse_mode?: "HTML";
+  disable_web_page_preview?: boolean;
+  reply_markup?: {
+    inline_keyboard: TelegramInlineKeyboardButton[][];
+  };
+};
 
 function checkWebhookSecret(request: Request) {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -26,58 +40,6 @@ function checkWebhookSecret(request: Request) {
   return expectedBuffer.length === actualBuffer.length && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
-async function safeSendTelegramMessage(
-  chatId: number | string,
-  text: string,
-  options: { appPath?: string; primaryText?: string } = {},
-) {
-  try {
-    await sendTelegramMessage(chatId, text, options);
-  } catch (error) {
-    console.error("Telegram send message error", error);
-  }
-}
-
-async function safeAnswerCallbackQuery(callbackQueryId: string, text?: string) {
-  try {
-    await answerCallbackQuery(callbackQueryId, text);
-  } catch (error) {
-    console.error("Telegram answer callback error", error);
-  }
-}
-
-async function safeSendTelegramLoginRequestMessage(chatId: number | string, token: string) {
-  try {
-    await sendTelegramLoginRequestMessage(chatId, token);
-  } catch (error) {
-    console.error("Telegram login request error", error);
-  }
-}
-
-async function safeSendTelegramRequiredConsentMessage(chatId: number | string) {
-  try {
-    await sendTelegramRequiredConsentMessage(chatId);
-  } catch (error) {
-    console.error("Telegram required consent message error", error);
-  }
-}
-
-async function safeSendTelegramMarketingConsentMessage(chatId: number | string) {
-  try {
-    await sendTelegramMarketingConsentMessage(chatId);
-  } catch (error) {
-    console.error("Telegram marketing consent message error", error);
-  }
-}
-
-async function safeSendTelegramMainMenuMessage(chatId: number | string, text?: string) {
-  try {
-    await sendTelegramMainMenuMessage(chatId, text);
-  } catch (error) {
-    console.error("Telegram main menu message error", error);
-  }
-}
-
 function appendLoginToken(returnTo: string, token: string) {
   const fallback = "/profile/events";
   const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : fallback;
@@ -85,6 +47,73 @@ function appendLoginToken(returnTo: string, token: string) {
   const separator = pathAndSearch.includes("?") ? "&" : "?";
   const withToken = `${pathAndSearch}${separator}loginToken=${encodeURIComponent(token)}`;
   return hash ? `${withToken}#${hash}` : withToken;
+}
+
+function botDocumentUrl(fileName: string) {
+  return `${getAppUrl()}/bot-documents/${fileName}`;
+}
+
+function telegramMessage(
+  chatId: number | string,
+  text: string,
+  inlineKeyboard: TelegramInlineKeyboardButton[][] = [
+    [{ text: "Открыть сервис", web_app: { url: `${getAppUrl()}/app` } }],
+    [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
+  ],
+): TelegramWebhookMethod {
+  return {
+    method: "sendMessage",
+    chat_id: chatId,
+    text,
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: inlineKeyboard,
+    },
+  };
+}
+
+function requiredConsentMessage(chatId: number | string) {
+  return telegramMessage(
+    chatId,
+    [
+      "Привет! Я бот «Собрались» — помогу открывать события, занимать места и получать уведомления.",
+      "",
+      "Перед началом работы обязательно ознакомьтесь с документами.",
+      "",
+      "Нажимая кнопку ниже, вы подтверждаете, что ознакомились с документами и даёте согласие на обработку своего Telegram ID, имени и username для использования сервиса.",
+    ].join("\n"),
+    [
+      [{ text: "📄 Политика конфиденциальности", url: botDocumentUrl("privacy-policy.html") }],
+      [{ text: "📄 Согласие на обработку данных", url: botDocumentUrl("personal-data-consent.html") }],
+      [{ text: "✅ Принимаю и даю согласие", callback_data: "required_consent_accept" }],
+    ],
+  );
+}
+
+function marketingConsentMessage(chatId: number | string) {
+  return telegramMessage(
+    chatId,
+    [
+      "💌 Хотите получать рекламную рассылку от «Собрались»?",
+      "",
+      "Советы по организации встреч, акции, новости и полезные материалы. Это рекламные сообщения. Отписаться можно в любой момент.",
+      "",
+      "Это необязательно — можно пропустить.",
+    ].join("\n"),
+    [
+      [{ text: "📄 Согласие на рекламную рассылку", url: botDocumentUrl("marketing-consent.html") }],
+      [{ text: "✅ Да, согласна на рекламную рассылку", callback_data: "marketing_consent_yes" }],
+      [{ text: "Нет, спасибо", callback_data: "marketing_consent_no" }],
+    ],
+  );
+}
+
+function mainMenuMessage(chatId: number | string, text = "Готово. Теперь можно открыть «Собрались» и продолжить.") {
+  return telegramMessage(chatId, text, [
+    [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/app` } }],
+    [{ text: "Создать событие", web_app: { url: `${getAppUrl()}/app?intent=create` } }],
+    [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
+  ]);
 }
 
 async function hasActiveConsent(userId: string, type: ConsentType) {
@@ -129,25 +158,27 @@ async function recordRequiredBotConsents(userId: string) {
   ]);
 }
 
-async function sendEventInvite(chatId: number | string, eventId: string) {
+async function eventInviteMessage(chatId: number | string, eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: { title: true, date: true, startTime: true, place: { select: { title: true } } },
   });
 
   if (!event) {
-    await safeSendTelegramMessage(chatId, "Не нашла это событие. Попросите организатора отправить новую ссылку.");
-    return;
+    return telegramMessage(chatId, "Не нашла это событие. Попросите организатора отправить новую ссылку.");
   }
 
-  await safeSendTelegramMessage(
+  return telegramMessage(
     chatId,
     `Вас пригласили на «${event.title}». Откройте карточку события, чтобы занять место, оставить комментарий или попасть в лист ожидания.`,
-    { appPath: `/app?event=${encodeURIComponent(eventId)}`, primaryText: "Открыть событие" },
+    [
+      [{ text: "Открыть событие", web_app: { url: `${getAppUrl()}/app?event=${encodeURIComponent(eventId)}` } }],
+      [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
+    ],
   );
 }
 
-async function handleMessage(update: TelegramUpdate) {
+async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookMethod | undefined> {
   const message = update.message;
   if (!message?.from || !message.text) return;
 
@@ -158,55 +189,56 @@ async function handleMessage(update: TelegramUpdate) {
 
     if (payload.startsWith("login_")) {
       const token = payload.replace("login_", "");
-      await safeSendTelegramLoginRequestMessage(message.chat.id, token);
-      return;
+      return telegramMessage(
+        message.chat.id,
+        "Чтобы войти в «Собрались», нажмите «Авторизоваться». Мы сохраним ваш Telegram ID, имя и username, чтобы открыть личный кабинет и присылать уведомления по событиям.",
+        [
+          [{ text: "Авторизоваться", callback_data: `login_confirm:${token}` }],
+          [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/profile/events` } }],
+        ],
+      );
     }
 
     const user = await upsertTelegramUser(message.from, message.chat.id);
 
     if (payload.startsWith("event_")) {
       const eventId = payload.replace("event_", "");
-      await sendEventInvite(message.chat.id, eventId);
-      return;
+      return eventInviteMessage(message.chat.id, eventId);
     }
 
     if (await hasRequiredBotConsents(user.id)) {
-      await safeSendTelegramMainMenuMessage(
+      return mainMenuMessage(
         message.chat.id,
         "С возвращением в «Собрались». Можно открыть приложение, создать событие или посмотреть свои события.",
       );
-      return;
     }
 
-    await safeSendTelegramRequiredConsentMessage(message.chat.id);
-    return;
+    return requiredConsentMessage(message.chat.id);
   }
 
   await upsertTelegramUser(message.from, message.chat.id);
 
   if (text.startsWith("/help")) {
-    await safeSendTelegramMessage(
+    return telegramMessage(
       message.chat.id,
       "Как пользоваться:\n1. Нажмите «Открыть сервис» или голубую кнопку меню внизу слева.\n2. В «Мои события» будут ваши мероприятия.\n3. Если освободится место из листа ожидания, я пришлю уведомление с кнопками «Да» и «Нет».",
     );
-    return;
   }
 
   if (text.startsWith("/events")) {
-    await safeSendTelegramMessage(message.chat.id, "Здесь будут твои мероприятия. Быстрее открыть их можно через кнопку «Мои события» ниже.", {
-      appPath: "/profile/events",
-      primaryText: "Мои события",
-    });
-    return;
+    return telegramMessage(message.chat.id, "Здесь будут твои мероприятия. Быстрее открыть их можно через кнопку «Мои события» ниже.", [
+      [{ text: "Мои события", web_app: { url: `${getAppUrl()}/profile/events` } }],
+      [{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/app` } }],
+    ]);
   }
 
-  await safeSendTelegramMessage(
+  return telegramMessage(
     message.chat.id,
     "Я понимаю команды /start, /help и /events. А сервис можно открыть через кнопку ниже.",
   );
 }
 
-async function handleCallback(update: TelegramUpdate) {
+async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookMethod | undefined> {
   const callback = update.callback_query;
   if (!callback) return;
 
@@ -215,10 +247,9 @@ async function handleCallback(update: TelegramUpdate) {
 
   if (data === "required_consent_accept") {
     await recordRequiredBotConsents(user.id);
-    await safeAnswerCallbackQuery(callback.id, "Согласие сохранено");
 
     if (callback.message?.chat.id) {
-      await safeSendTelegramMarketingConsentMessage(callback.message.chat.id);
+      return marketingConsentMessage(callback.message.chat.id);
     }
     return;
   }
@@ -226,10 +257,9 @@ async function handleCallback(update: TelegramUpdate) {
   if (data === "marketing_consent_yes" || data === "marketing_consent_no") {
     const accepted = data === "marketing_consent_yes";
     await recordConsent(user.id, ConsentType.marketing_offers, accepted);
-    await safeAnswerCallbackQuery(callback.id, accepted ? "Рекламная рассылка включена" : "Хорошо, рекламную рассылку не включаем");
 
     if (callback.message?.chat.id) {
-      await safeSendTelegramMainMenuMessage(
+      return mainMenuMessage(
         callback.message.chat.id,
         accepted
           ? "Спасибо. Рекламная рассылка подключена. Теперь можно открыть «Собрались»."
@@ -242,20 +272,23 @@ async function handleCallback(update: TelegramUpdate) {
   if (data.startsWith("login_confirm:")) {
     const token = data.replace("login_confirm:", "");
     const completed = await completeTelegramLogin(token, user.id);
-    await safeAnswerCallbackQuery(callback.id, completed.ok ? "Вход подтверждён" : "Ссылка для входа устарела");
 
     if (callback.message?.chat.id) {
-      await safeSendTelegramMessage(
+      return telegramMessage(
         callback.message.chat.id,
         completed.ok
           ? "Готово, вход подтверждён. Нажмите «Вернуться в приложение», и «Собрались» откроет нужный экран."
           : "Не получилось подтвердить вход: ссылка устарела. Вернитесь на сайт и нажмите «Авторизоваться» ещё раз.",
         completed.ok
-          ? {
-              appPath: appendLoginToken(completed.returnTo, token),
-              primaryText: completed.returnTo?.startsWith("/app?event=") ? "Вернуться к событию" : "Вернуться в приложение",
-            }
-          : {},
+          ? [
+              [
+                {
+                  text: completed.returnTo?.startsWith("/app?event=") ? "Вернуться к событию" : "Вернуться в приложение",
+                  web_app: { url: `${getAppUrl()}${appendLoginToken(completed.returnTo, token)}` },
+                },
+              ],
+            ]
+          : [[{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/profile/events` } }]],
       );
     }
     return;
@@ -264,14 +297,15 @@ async function handleCallback(update: TelegramUpdate) {
   if (data.startsWith("waitlist_accept:")) {
     const waitlistEntryId = data.replace("waitlist_accept:", "");
     const result = await acceptWaitlistEntry(waitlistEntryId, user.id);
-    await safeAnswerCallbackQuery(callback.id, result.ok ? "Место закреплено за вами" : result.error);
     if (callback.message?.chat.id) {
-      await safeSendTelegramMessage(
+      return telegramMessage(
         callback.message.chat.id,
         result.ok
           ? "Готово, место за вами закреплено. Откройте событие, чтобы посмотреть карточку."
           : `Не получилось занять место: ${result.error}`,
-        result.ok ? { appPath: `/app?event=${encodeURIComponent(result.participant.eventId)}`, primaryText: "Открыть событие" } : {},
+        result.ok
+          ? [[{ text: "Открыть событие", web_app: { url: `${getAppUrl()}/app?event=${encodeURIComponent(result.participant.eventId)}` } }]]
+          : [[{ text: "Открыть приложение", web_app: { url: `${getAppUrl()}/app` } }]],
       );
     }
     return;
@@ -280,11 +314,18 @@ async function handleCallback(update: TelegramUpdate) {
   if (data.startsWith("waitlist_skip:")) {
     const waitlistEntryId = data.replace("waitlist_skip:", "");
     const result = await skipWaitlistEntry(waitlistEntryId, user.id);
-    await safeAnswerCallbackQuery(callback.id, result.ok ? "Приглашение пропущено" : result.error);
-    return;
+    return {
+      method: "answerCallbackQuery",
+      callback_query_id: callback.id,
+      text: result.ok ? "Приглашение пропущено" : result.error,
+    };
   }
 
-  await safeAnswerCallbackQuery(callback.id, "Готово");
+  return {
+    method: "answerCallbackQuery",
+    callback_query_id: callback.id,
+    text: "Готово",
+  };
 }
 
 export async function POST(request: Request) {
@@ -294,8 +335,10 @@ export async function POST(request: Request) {
     }
 
     const update = (await request.json()) as TelegramUpdate;
-    await handleMessage(update);
-    await handleCallback(update);
+    const telegramMethod = (await handleMessage(update)) || (await handleCallback(update));
+    if (telegramMethod) {
+      return NextResponse.json(telegramMethod);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
