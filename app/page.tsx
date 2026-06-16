@@ -358,14 +358,6 @@ const developmentDemoEvent: EventRecord = {
   ],
 };
 
-const money = new Intl.NumberFormat("ru-RU");
-const timeOptions = Array.from({ length: 24 * 12 }, (_, index) => {
-  const totalMinutes = index * 5;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-});
-
 function isEventKind(value: unknown): value is EventKind {
   return value === "breakfast" || value === "bath" || value === "lunch" || value === "other";
 }
@@ -538,7 +530,7 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       if (params.has("event") || params.get("devEvent") === "1") return "home";
       if (params.get("intent") === "create") return localStorage.getItem(PROFILE_KEY) ? "kind" : "account";
-      return localStorage.getItem(PROFILE_KEY) ? "dashboard" : "account";
+      return "home";
     }
     if (!window.location.pathname.startsWith("/profile/events")) return "home";
 
@@ -564,6 +556,7 @@ export default function App() {
   const [title, setTitle] = useState(defaults.breakfast.title);
   const [venue, setVenue] = useState("");
   const [mapUrl, setMapUrl] = useState("");
+  const [guestText, setGuestText] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [minGuests, setMinGuests] = useState(defaults.breakfast.minGuests);
@@ -651,7 +644,7 @@ export default function App() {
         if (window.location.pathname.startsWith("/app") && params.get("intent") === "create") {
           setAfterAuthScreen("kind");
           setScreen("kind");
-        } else if (window.location.pathname.startsWith("/profile/events") || (window.location.pathname.startsWith("/app") && !params.has("event"))) {
+        } else if (window.location.pathname.startsWith("/profile/events")) {
           setScreen("dashboard");
         }
       } catch (sessionError) {
@@ -696,13 +689,12 @@ export default function App() {
         setGuestName((current) => current || profile.name);
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
         const params = new URLSearchParams(window.location.search);
-        const hasEventInvite = params.has("event");
         const wantsCreate = params.get("intent") === "create";
         if (wantsCreate) setAfterAuthScreen("kind");
         setScreen((current) =>
           wantsCreate
             ? "kind"
-            : current === "account" || window.location.pathname.startsWith("/profile/events") || (window.location.pathname.startsWith("/app") && !hasEventInvite)
+            : current === "account" || window.location.pathname.startsWith("/profile/events")
               ? "dashboard"
               : current,
         );
@@ -803,12 +795,6 @@ export default function App() {
     time: createAttempted && !time,
     maxGuests: createAttempted && maxGuests < 1,
   };
-  const priceRange = useMemo(() => {
-    if (paymentMode !== "manual" || totalCost <= 0) return null;
-    const low = Math.ceil(totalCost / Math.max(maxGuests, 1));
-    const high = Math.ceil(totalCost / Math.max(minGuests || maxGuests, 1));
-    return low === high ? `${money.format(low)} ₽` : `${money.format(low)}-${money.format(high)} ₽`;
-  }, [maxGuests, minGuests, paymentMode, totalCost]);
   const exportText = useMemo(() => {
     if (participants.length === 0) return "Пока нет участников.";
     return participants.map((participant, index) => `${index + 1}. ${participant.name} - ${participant.comment || "без комментария"}`).join("\n");
@@ -888,6 +874,15 @@ export default function App() {
     setScreen("dashboard");
   }
 
+  function startCreate() {
+    setAfterAuthScreen("kind");
+    if (!cabinetUser) {
+      setScreen("account");
+      return;
+    }
+    setScreen("kind");
+  }
+
   async function logout() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -913,6 +908,7 @@ export default function App() {
     setEventKind(kind);
     setTitle(next.title);
     setVenue(next.venue);
+    setGuestText("");
     setMinGuests(next.minGuests);
     setMaxGuests(next.maxGuests);
     setTotalCost(next.totalCost);
@@ -943,6 +939,9 @@ export default function App() {
     setCreateAttempted(true);
     if (!title.trim() || !venue.trim() || !date || !time || maxGuests < 1) {
       setError("Заполните обязательные поля: название, место, дату, время и количество мест.");
+      window.setTimeout(() => {
+        document.querySelector<HTMLElement>("[data-required-error='true']")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
       return;
     }
 
@@ -998,6 +997,7 @@ export default function App() {
     setEventKind(event.kind);
     setTitle(event.title);
     setVenue(event.venue);
+    setGuestText("");
     setMapUrl(event.mapUrl);
     setDate(event.date);
     setTime(event.time);
@@ -1272,11 +1272,11 @@ export default function App() {
         }}
       />
       <div className="relative z-10">
-        <Header goHome={goHome} openDashboard={openDashboard} cabinetUser={cabinetUser} logout={logout} />
+        <Header goHome={goHome} openDashboard={openDashboard} cabinetUser={cabinetUser} />
 
-        {screen === "home" && <Home />}
+        {screen === "home" && <Home startCreate={startCreate} cabinetUser={cabinetUser} />}
         {screen === "account" && <Account goHome={goHome} onAuthenticated={applyAuthenticatedUser} returnTo={afterAuthScreen === "kind" ? "/app?intent=create" : "/profile/events"} />}
-        {screen === "dashboard" && <Dashboard events={events} isLoading={isLoadingEvents} openEvent={openEvent} deleteEvent={deleteEvent} createNew={() => setScreen("kind")} />}
+        {screen === "dashboard" && <Dashboard events={events} isLoading={isLoadingEvents} openEvent={openEvent} deleteEvent={deleteEvent} createNew={() => setScreen("kind")} logout={logout} />}
         {screen === "kind" && <KindPicker goBack={() => setScreen("home")} chooseKind={chooseKind} />}
         {screen === "builder" && (
           <Builder
@@ -1288,6 +1288,8 @@ export default function App() {
             setVenue={setVenue}
             mapUrl={mapUrl}
             setMapUrl={setMapUrl}
+            guestText={guestText}
+            setGuestText={setGuestText}
             date={date}
             setDate={setDate}
             time={time}
@@ -1304,7 +1306,6 @@ export default function App() {
             setBankName={setBankName}
             paymentPhone={paymentPhone}
             setPaymentPhone={setPaymentPhone}
-            priceRange={priceRange}
             eventImageId={eventImageId}
             setEventImageId={setEventImageId}
             setCustomImagePreview={setCustomImagePreview}
@@ -1332,6 +1333,7 @@ export default function App() {
             imagePositionX={imagePositionX}
             imagePositionY={imagePositionY}
             imageScale={imageScale}
+            guestText={guestText}
             isOrganizerPreview={Boolean(persistedUserId && activeEvent.organizerId === persistedUserId)}
             needsTelegramAuth={!persistedUserId}
             eventAuthLoading={eventAuthLoading}
@@ -1368,44 +1370,49 @@ export default function App() {
   );
 }
 
-function Header({ goHome, openDashboard, cabinetUser, logout }: { goHome: () => void; openDashboard: () => void; cabinetUser: CabinetUser | null; logout: () => void }) {
+function Header({ goHome, openDashboard, cabinetUser }: { goHome: () => void; openDashboard: () => void; cabinetUser: CabinetUser | null }) {
+  const initials = cabinetUser?.name?.trim() ? cabinetUser.name.trim().slice(0, 1).toUpperCase() : "ЛК";
+
   return (
     <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-[26px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 px-3 py-2.5 shadow-[0_18px_50px_rgba(52,44,35,0.10)] backdrop-blur-2xl sm:px-4">
-        <button onClick={goHome} className="min-w-0 rounded-[20px] px-1 text-left transition hover:opacity-80" aria-label="На главную">
-          <BrandLogoApproved caption="Красиво собрать своих" symbolSize={42} compact />
+        <button onClick={goHome} className="min-w-0 flex-1 rounded-[20px] px-1 text-left transition hover:opacity-80" aria-label="На главную">
+          <BrandLogoApproved caption="Красиво собрать своих" symbolSize={38} compact />
         </button>
-        <div className="flex shrink-0 items-center gap-2">
-          <button onClick={openDashboard} className="rounded-[18px] bg-[#7e8466] px-4 py-2.5 text-sm font-semibold text-[#fffdf8] shadow-[0_12px_26px_rgba(89,96,71,0.22)] transition hover:-translate-y-0.5 hover:bg-[#596047] sm:px-5">
-            {cabinetUser ? "Личный кабинет" : "Войти"}
-          </button>
-          {cabinetUser && (
-            <button onClick={logout} className="rounded-[18px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/75 px-3 py-2.5 text-sm font-semibold text-[#7c746a] transition hover:-translate-y-0.5 hover:border-[#c59a55]/50 hover:text-[#2b2a27] hover:shadow-[0_10px_24px_rgba(52,44,35,0.10)] sm:px-4">
-              Выйти
-            </button>
+        <button onClick={openDashboard} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 px-3 py-2 text-sm font-semibold text-[#2b2a27] shadow-[0_10px_24px_rgba(52,44,35,0.09)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 sm:px-4">
+          {cabinetUser ? (
+            <>
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7e8466] text-xs font-bold text-[#fffdf8]">{initials}</span>
+              <span className="hidden sm:inline">Личный кабинет</span>
+              <span className="sm:hidden">ЛК</span>
+            </>
+          ) : (
+            "Войти"
           )}
-        </div>
+        </button>
       </div>
     </header>
   );
 }
 
-function Home() {
+function Home({ startCreate, cabinetUser }: { startCreate: () => void; cabinetUser: CabinetUser | null }) {
   return (
     <section className="mx-auto grid min-h-[calc(100svh-92px)] max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12 lg:py-10">
       <div className="max-w-xl text-center lg:text-left">
-        <div className="mb-5 flex justify-center lg:justify-start">
-          <BrandLogoApproved caption="приглашение в одну ссылку" symbolSize={50} />
-        </div>
-        <h1 className="font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.3rem]">
+        <span className="sobralis-chip">приглашение в одну ссылку</span>
+        <h1 className="mt-5 font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.3rem]">
           Красиво собрать своих
         </h1>
         <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-[#7c746a] sm:text-lg sm:leading-8 lg:mx-0">
-          Гости, места, оплаты и напоминания — в одной ссылке.
+          Создайте красивую карточку встречи: дата, место, гости, места и напоминания — без хаоса в чате.
         </p>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">
-          завтраки · бани · ужины · камерные встречи
-        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+          <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
+          <span className="rounded-full border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/72 px-5 py-3 text-center text-sm font-semibold text-[#596047]">
+            {cabinetUser ? "Откроем выбор формата встречи" : "Сначала подтвердим Telegram"}
+          </span>
+        </div>
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">завтраки · бани · ужины · камерные встречи</p>
       </div>
 
       <HomeInvitationMock />
@@ -1640,20 +1647,26 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
   );
 }
 
-function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew }: { events: EventRecord[]; isLoading: boolean; openEvent: (event: EventRecord) => void; deleteEvent: (id: string) => void; createNew: () => void }) {
+function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew, logout }: { events: EventRecord[]; isLoading: boolean; openEvent: (event: EventRecord) => void; deleteEvent: (id: string) => void; createNew: () => void; logout: () => void }) {
   return (
     <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-9">
       <div className="sobralis-surface flex flex-col justify-between gap-5 rounded-[34px] p-5 sm:flex-row sm:items-end sm:p-7">
         <div>
-          <span className="sobralis-chip">кабинет организатора</span>
-          <h1 className="sobralis-display mt-4 text-[2.8rem] leading-none sm:text-[4rem]">Мои события</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base">Здесь живут ваши карточки-приглашения: гости, места, ожидание и ссылка для отправки.</p>
+          <span className="sobralis-chip">мои события</span>
+          <h1 className="sobralis-display mt-4 text-[2.6rem] leading-none sm:text-[3.8rem]">Карточки приглашений</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base">Здесь будут ваши встречи: ссылка для гостей, места, ожидание и аккуратный организаторский слой.</p>
         </div>
         {events.length > 0 && <button onClick={createNew} className="sobralis-button-primary shrink-0">Создать событие</button>}
       </div>
       <div className="mt-5 grid gap-4 sm:mt-7">
         {isLoading && <EmptyState title="Загружаю события" text="Сейчас подтяну список из базы." />}
-        {!isLoading && events.length === 0 && <EmptyState title="Пока нет событий" text="Создайте первую карточку и отправьте гостям одну красивую ссылку вместо хаоса в чате." action={<button onClick={createNew} className="sobralis-button-primary">Создать событие</button>} />}
+        {!isLoading && events.length === 0 && (
+          <EmptyState
+            title="Пока нет событий"
+            text="Создайте первую карточку и отправьте гостям одну красивую ссылку вместо хаоса в чате."
+            action={<button onClick={createNew} className="sobralis-button-primary">Создать событие</button>}
+          />
+        )}
         {events.map((event) => (
           <article key={event.id} className="overflow-hidden rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/88 shadow-[0_18px_48px_rgba(52,44,35,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(52,44,35,0.12)]">
             <div className="grid gap-0 sm:grid-cols-[190px_1fr]">
@@ -1677,6 +1690,11 @@ function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew }: { e
           </article>
         ))}
       </div>
+      <div className="mt-7 flex justify-center">
+        <button onClick={logout} className="rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/72 px-5 py-3 text-sm font-semibold text-[#7c746a] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 hover:text-[#2b2a27]">
+          Выйти из аккаунта
+        </button>
+      </div>
     </section>
   );
 }
@@ -1687,7 +1705,7 @@ function KindPicker({ goBack, chooseKind }: { goBack: () => void; chooseKind: (k
       <StepBack onClick={goBack} />
       <div className="max-w-3xl">
         <span className="sobralis-chip">новое приглашение</span>
-        <h1 className="sobralis-display mt-4 text-[2.8rem] leading-none sm:text-[4.2rem]">Что собираем?</h1>
+        <h1 className="sobralis-display mt-4 text-[2.35rem] leading-none sm:text-[3.4rem]">Какое мероприятие?</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#7c746a] sm:text-base">Выберите сценарий, а дальше соберём красивую карточку для гостей: место, время, комментарии и лист ожидания.</p>
       </div>
       <div className="mt-6 grid gap-4 md:grid-cols-2 sm:mt-8">
@@ -1695,7 +1713,7 @@ function KindPicker({ goBack, chooseKind }: { goBack: () => void; chooseKind: (k
           <button key={kind.id} onClick={() => chooseKind(kind.id)} className="group relative overflow-hidden rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 p-5 text-left shadow-[0_16px_44px_rgba(52,44,35,0.08)] transition hover:-translate-y-1 hover:border-[#c59a55]/55 hover:shadow-[0_24px_60px_rgba(52,44,35,0.12)] sm:p-6">
             <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full ${kind.accent} opacity-70 blur-xl`} aria-hidden="true" />
             <div className="relative">
-              <div className={`mb-5 grid h-12 w-12 place-items-center rounded-[20px] ${kind.accent} text-sm font-bold tracking-[0.18em] text-[#596047] shadow-inner`}>{kind.id === "breakfast" ? "01" : kind.id === "bath" ? "02" : kind.id === "lunch" ? "03" : "+"}</div>
+              <span className="mb-4 inline-flex rounded-full bg-[#f5efe6]/85 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#596047]">формат встречи</span>
               <h2 className="sobralis-display text-3xl leading-none sm:text-4xl">{kind.title}</h2>
               <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base sm:leading-7">{kind.description}</p>
               <div className="mt-5 inline-flex rounded-full bg-[#f5efe6] px-4 py-2 text-sm font-semibold text-[#596047] transition group-hover:bg-[#7e8466] group-hover:text-[#fffdf8]">Выбрать</div>
@@ -1716,6 +1734,8 @@ type BuilderProps = {
   setVenue: (value: string) => void;
   mapUrl: string;
   setMapUrl: (value: string) => void;
+  guestText: string;
+  setGuestText: (value: string) => void;
   date: string;
   setDate: (value: string) => void;
   time: string;
@@ -1732,7 +1752,6 @@ type BuilderProps = {
   setBankName: (value: string) => void;
   paymentPhone: string;
   setPaymentPhone: (value: string) => void;
-  priceRange: string | null;
   eventImageId: string;
   setEventImageId: (value: string) => void;
   setCustomImagePreview: (value: string) => void;
@@ -1782,6 +1801,13 @@ function Builder(props: BuilderProps) {
     y: draftPositionY,
     scale: Math.max(draftScale / 100, 1),
   };
+  const progressSteps = [
+    { label: "Формат", done: true },
+    { label: "Детали", done: Boolean(props.title.trim() && props.venue.trim() && props.date && props.time) },
+    { label: "Гости", done: props.maxGuests > 0 },
+    { label: "Визуал", done: Boolean(props.customImagePreview || props.eventImageId) },
+    { label: "Предпросмотр", done: false },
+  ];
 
   function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -1892,29 +1918,37 @@ function Builder(props: BuilderProps) {
   }
 
   return (
-    <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-9">
+    <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-9">
       <StepBack onClick={props.goBack} />
       <Card className="relative overflow-hidden">
         <div className="absolute -right-28 -top-32 h-72 w-72 rounded-full bg-[#c59a55]/12 blur-3xl" aria-hidden="true" />
         <div className="absolute -bottom-28 -left-24 h-64 w-64 rounded-full bg-[#7e8466]/10 blur-3xl" aria-hidden="true" />
         <div className="relative mb-6 max-w-2xl">
           <span className="sobralis-chip">{props.selectedKind.title}</span>
-          <h1 className="sobralis-display mt-4 text-[2.8rem] leading-none sm:text-[4.2rem]">Создать событие</h1>
-          <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base">Заполните только то, что нужно гостю для решения: куда прийти, когда, сколько мест и как присоединиться.</p>
+          <h1 className="sobralis-display mt-4 text-[2.35rem] leading-none sm:text-[3.35rem]">Детали приглашения</h1>
+          <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base">Заполните только то, что нужно гостю: куда прийти, когда, сколько мест и что важно знать перед встречей.</p>
         </div>
 
-        <div className="relative grid gap-4 sm:gap-5">
-          <Section title="Название события">
-            <Field label="Название *">
-              <input className={`input ${inputStateClass(props.requiredErrors.title)}`} value={props.title} onChange={(event) => props.setTitle(event.target.value)} placeholder="Например: Женский завтрак" />
-              <RequiredHint show={props.requiredErrors.title} />
-            </Field>
+        <BuilderProgress steps={progressSteps} />
+
+        <div className="relative mt-5 grid gap-4 sm:gap-5">
+          <Section title="Название и текст для гостей">
+            <div className="grid gap-4">
+              <Field label="Название *">
+                <input data-required-error={props.requiredErrors.title ? "true" : undefined} className={`input ${inputStateClass(props.requiredErrors.title)}`} value={props.title} onChange={(event) => props.setTitle(event.target.value)} placeholder="Например: Женский завтрак" />
+                <RequiredHint show={props.requiredErrors.title} />
+              </Field>
+              <Field label="Текст приглашения">
+                <textarea className="input min-h-28 resize-none leading-6" maxLength={260} value={props.guestText} onChange={(event) => props.setGuestText(event.target.value)} placeholder="Пожелания по одежде, настроение встречи или важные детали для гостей" />
+                <div className="mt-2 text-xs font-semibold text-[#9a9085]">До 260 символов. Если оставить пустым, на карточке будет кнопка «Добавить описание».</div>
+              </Field>
+            </div>
           </Section>
 
           <Section title="Место и время">
             <div className="grid gap-4">
               <Field label="Место проведения *">
-                <input className={`input ${inputStateClass(props.requiredErrors.venue)}`} value={props.venue} onChange={(event) => props.setVenue(event.target.value)} />
+                <input data-required-error={props.requiredErrors.venue ? "true" : undefined} className={`input ${inputStateClass(props.requiredErrors.venue)}`} value={props.venue} onChange={(event) => props.setVenue(event.target.value)} />
                 <RequiredHint show={props.requiredErrors.venue} />
               </Field>
               <Field label="Ссылка на точку на карте">
@@ -1922,18 +1956,11 @@ function Builder(props: BuilderProps) {
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Дата *">
-                  <input type="date" className={`input input-compact ${inputStateClass(props.requiredErrors.date)}`} value={props.date} onChange={(event) => props.setDate(event.target.value)} />
+                  <input data-required-error={props.requiredErrors.date ? "true" : undefined} type="date" className={`input input-compact ${inputStateClass(props.requiredErrors.date)}`} value={props.date} onChange={(event) => props.setDate(event.target.value)} />
                   <RequiredHint show={props.requiredErrors.date} />
                 </Field>
                 <Field label="Время *">
-                  <select className={`input input-compact ${inputStateClass(props.requiredErrors.time)}`} value={props.time} onChange={(event) => props.setTime(event.target.value)}>
-                    <option value="">Выберите время</option>
-                    {timeOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                  <TimeWheelPicker value={props.time} onChange={props.setTime} hasError={props.requiredErrors.time} />
                   <RequiredHint show={props.requiredErrors.time} />
                 </Field>
               </div>
@@ -1946,14 +1973,14 @@ function Builder(props: BuilderProps) {
                 <input type="number" min="1" className="input" value={props.minGuests} onChange={(event) => props.setMinGuests(Number(event.target.value))} />
               </Field>
               <Field label="Максимум гостей *">
-                <input type="number" min="1" className={`input ${inputStateClass(props.requiredErrors.maxGuests)}`} value={props.maxGuests} onChange={(event) => props.setMaxGuests(Number(event.target.value))} />
+                <input data-required-error={props.requiredErrors.maxGuests ? "true" : undefined} type="number" min="1" className={`input ${inputStateClass(props.requiredErrors.maxGuests)}`} value={props.maxGuests} onChange={(event) => props.setMaxGuests(Number(event.target.value))} />
                 <RequiredHint show={props.requiredErrors.maxGuests} />
               </Field>
             </div>
           </Section>
 
           <Section title="Оплата">
-            <Field label="Оплата">
+            <Field label="Формат оплаты">
               <select className="input" value={props.paymentMode} onChange={(event) => props.setPaymentMode(event.target.value as PaymentMode)}>
                 <option value="none">Без оплаты</option>
                 <option value="manual">Оплата по реквизитам организатора</option>
@@ -1961,11 +1988,11 @@ function Builder(props: BuilderProps) {
             </Field>
             {props.paymentMode === "manual" && (
               <div className="mt-4 grid gap-4">
-                <Field label="Общая сумма">
+                <Field label="Сумма для оплаты">
                   <input type="number" min="0" className="input" value={props.totalCost} onChange={(event) => props.setTotalCost(Number(event.target.value))} />
                 </Field>
-              <div className="rounded-[20px] border border-[#cce9d8] bg-[#e8f8ef] px-4 py-3 text-sm font-semibold text-[#426c50]">
-                  Примерно на человека: {props.priceRange || "укажите сумму и гостей"}
+                <div className="rounded-[20px] border border-[#e7ded2] bg-[#f5efe6]/65 px-4 py-3 text-xs font-semibold leading-5 text-[#7c746a]">
+                  Реквизиты будут нужны для отдельного сценария «Открыть оплату». Сейчас не показываем оплату главным элементом гостевой карточки.
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Банк">
@@ -2035,7 +2062,7 @@ function Builder(props: BuilderProps) {
 
         {props.error && <Alert type="error">{props.error}</Alert>}
         <button onClick={props.createEvent} className="sobralis-button-primary mt-6 w-full text-base">
-          Создать событие
+          Сохранить и открыть предпросмотр
         </button>
       </Card>
       {draftImagePreview && (
@@ -2083,6 +2110,59 @@ function Builder(props: BuilderProps) {
   );
 }
 
+function BuilderProgress({ steps }: { steps: Array<{ label: string; done: boolean }> }) {
+  const doneCount = steps.filter((step) => step.done).length;
+  const width = Math.max(1, Math.round((doneCount / steps.length) * 100)) + "%";
+
+  return (
+    <div className="relative rounded-[26px] border border-[rgba(43,42,39,0.10)] bg-[#f5efe6]/62 p-4 shadow-[0_10px_24px_rgba(52,44,35,0.04)]">
+      <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#596047]">
+        <span>Заполнение приглашения</span>
+        <span>{doneCount} из {steps.length}</span>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e4dccf]">
+        <div className="h-full rounded-full bg-[#7e8466] transition-all" style={{ width }} />
+      </div>
+      <div className="mt-3 grid grid-cols-5 gap-1.5 text-center text-[10px] font-semibold text-[#7c746a] sm:text-xs">
+        {steps.map((step) => (
+          <span key={step.label} className={step.done ? "text-[#596047]" : "text-[#9a9085]"}>{step.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TimeWheelPicker({ value, onChange, hasError }: { value: string; onChange: (value: string) => void; hasError: boolean }) {
+  const [selectedHour = "", selectedMinute = ""] = /^\d{2}:\d{2}$/.test(value) ? value.split(":") : [];
+  const hours = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, "0"));
+
+  function update(part: "hour" | "minute", nextValue: string) {
+    const hour = part === "hour" ? nextValue : selectedHour || "10";
+    const minute = part === "minute" ? nextValue : selectedMinute || "00";
+    onChange(hour && minute ? hour + ":" + minute : "");
+  }
+
+  const classes = hasError ? "border-[#d94a38] bg-[#fff7f5] shadow-[0_0_0_4px_rgba(217,74,56,0.10)]" : "border-[#e7ded2] bg-[#fffdf8]";
+
+  return (
+    <div data-required-error={hasError ? "true" : undefined} className={`grid grid-cols-2 gap-2 rounded-[22px] border p-2 ${classes}`}>
+      <select aria-label="Часы" className="rounded-[16px] border border-[#e7ded2] bg-[#fffdf8] px-3 py-3 text-base font-semibold text-[#2b2a27] outline-none" value={selectedHour} onChange={(event) => update("hour", event.target.value)}>
+        <option value="">Часы</option>
+        {hours.map((hour) => (
+          <option key={hour} value={hour}>{hour}</option>
+        ))}
+      </select>
+      <select aria-label="Минуты" className="rounded-[16px] border border-[#e7ded2] bg-[#fffdf8] px-3 py-3 text-base font-semibold text-[#2b2a27] outline-none" value={selectedMinute} onChange={(event) => update("minute", event.target.value)}>
+        <option value="">Минуты</option>
+        {minutes.map((minute) => (
+          <option key={minute} value={minute}>{minute}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function RequiredHint({ show }: { show: boolean }) {
   if (!show) return null;
   return <div className="mt-2 text-xs font-semibold text-[#d94a38]">Заполните это поле</div>;
@@ -2095,6 +2175,7 @@ function EventPage(props: {
   imagePositionX: number;
   imagePositionY: number;
   imageScale: number;
+  guestText: string;
   isOrganizerPreview: boolean;
   needsTelegramAuth: boolean;
   eventAuthLoading: boolean;
@@ -2183,6 +2264,7 @@ function EventPage(props: {
             guestName={props.guestName}
             guestComment={props.guestComment}
             paymentMode={props.event.paymentMode}
+            description={props.guestText || undefined}
             calendarLinks={links}
             notice={props.notice}
             error={props.error}
@@ -2372,7 +2454,6 @@ function Alert({ type, children }: { type: "success" | "info" | "error"; childre
 function EmptyState({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
   return (
     <div className="rounded-[30px] border border-dashed border-[#d8cdbf] bg-[#fffdf8]/70 p-6 text-center shadow-[0_14px_34px_rgba(52,44,35,0.06)] sm:p-7">
-      <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-[#d8cdbf] bg-[#f5efe6]" aria-hidden="true" />
       <h3 className="sobralis-display text-2xl leading-none">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6f665d]">{text}</p>
       {action && <div className="mt-4">{action}</div>}
