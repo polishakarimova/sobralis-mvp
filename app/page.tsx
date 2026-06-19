@@ -1429,7 +1429,7 @@ function Header({ goHome, openDashboard, cabinetUser }: { goHome: () => void; op
     <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-[26px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 px-3 py-2.5 shadow-[0_18px_50px_rgba(52,44,35,0.10)] backdrop-blur-2xl sm:px-4">
         <button onClick={goHome} className="min-w-0 flex-1 rounded-[20px] px-1 text-left transition hover:opacity-80" aria-label="На главную">
-          <BrandLogoApproved caption="Красиво собрать своих" symbolSize={38} compact />
+          <BrandLogoApproved caption="Удобно собрать своих" symbolSize={38} compact />
         </button>
         <button onClick={openDashboard} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 px-3 py-2 text-sm font-semibold text-[#2b2a27] shadow-[0_10px_24px_rgba(52,44,35,0.09)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 sm:px-4">
           {cabinetUser ? (
@@ -1483,7 +1483,7 @@ function Home({
           <div className="mt-7 flex justify-center">
             <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
           </div>
-          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">завтраки · бани · ужины · камерные встречи</p>
+          <p className="mt-8 whitespace-nowrap text-[9px] font-light uppercase tracking-[0.22em] text-[#7e8466] sm:text-[10px] sm:tracking-[0.28em]">завтраки · бани · ужины · камерные встречи</p>
         </div>
       </section>
     );
@@ -1534,7 +1534,7 @@ function Home({
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
           <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
         </div>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">завтраки · бани · ужины · камерные встречи</p>
+        <p className="mt-8 whitespace-nowrap text-[9px] font-light uppercase tracking-[0.22em] text-[#7e8466] sm:text-[10px] sm:tracking-[0.28em]">завтраки · бани · ужины · камерные встречи</p>
       </div>
 
       <div className="sobralis-surface mx-auto w-full max-w-[660px] rounded-[34px] p-4 shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-5">
