@@ -218,32 +218,14 @@ function getTelegramWebApp() {
   return window.Telegram?.WebApp;
 }
 
-function showTelegramPopup(webApp: TelegramWebApp, message: string) {
-  return new Promise<void>((resolve) => {
-    if (!webApp.showPopup) {
-      resolve();
-      return;
-    }
-
-    webApp.showPopup(
-      {
-        title: "Авторизация",
-        message,
-        buttons: [{ id: "ok", type: "ok", text: "OK" }],
-      },
-      () => resolve(),
-    );
-  });
-}
-
 async function openTelegramAuthLink(botUrl: string, pendingWindow: Window | null, shouldOpenInCurrentWindow: boolean) {
   const webApp = getTelegramWebApp();
 
   if (webApp?.openTelegramLink) {
-    await showTelegramPopup(webApp, "Сейчас откроется бот «Собрались». В нём нажмите «Авторизоваться», затем «Вернуться в приложение».");
     webApp.openTelegramLink(botUrl);
-    window.setTimeout(() => webApp.close?.(), 350);
-    window.setTimeout(() => webApp.close?.(), 1200);
+    window.setTimeout(() => webApp.close?.(), 0);
+    window.setTimeout(() => webApp.close?.(), 180);
+    window.setTimeout(() => webApp.close?.(), 800);
     return "telegram-webapp" as const;
   }
 
@@ -679,7 +661,15 @@ export default function App() {
         const payload = await safeReadJson<{
           ok: boolean;
           data?: { id: string; name: string; phone?: string | null; telegramUsername?: string | null };
+          code?: string;
+          error?: string;
         }>(response);
+
+        if (payload.code === "CONSENT_REQUIRED") {
+          setNotice("");
+          setError("");
+          return;
+        }
 
         if (!payload.ok || !payload.data || cancelled) return;
 
@@ -1204,45 +1194,11 @@ export default function App() {
     if (eventAuthLoading) return;
 
     const webApp = getTelegramWebApp();
-    if (webApp?.initData) {
-      setEventAuthLoading(true);
-      try {
-        const response = await fetch("/api/auth/telegram-mini-app", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData: webApp.initData }),
-        });
-        const payload = await safeReadJson<{
-          ok: boolean;
-          data?: { id: string; name: string; phone?: string | null; telegramUsername?: string | null };
-          error?: string;
-        }>(response);
-        if (!payload.ok || !payload.data) throw new Error(payload.error || "Не получилось войти через Telegram");
-
-        const profile = {
-          id: payload.data.id,
-          name: payload.data.name,
-          phone: payload.data.phone || (payload.data.telegramUsername ? `@${payload.data.telegramUsername}` : ""),
-        };
-        setCabinetUser(profile);
-        setGuestName((current) => current || profile.name);
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-        await refreshActiveEvent(eventId);
-        setNotice("Готово, Telegram подтверждён. Теперь можно занять место.");
-        setError("");
-      } catch (authError) {
-        setError(authError instanceof Error ? authError.message : "Не получилось войти через Telegram");
-      } finally {
-        setEventAuthLoading(false);
-      }
-      return;
-    }
-
     const userAgent = navigator.userAgent || "";
     const shouldOpenInCurrentWindow = /Telegram/i.test(userAgent);
     const pendingWindow = webApp?.openTelegramLink || shouldOpenInCurrentWindow ? null : window.open("", "_blank", "noopener,noreferrer");
     setEventAuthLoading(true);
-    setNotice("Откроем бот «Собрались». Если Telegram спросит «Открыть?», нажмите OK, затем в боте нажмите «Авторизоваться».");
+    setNotice("");
     setError("");
 
     const finishTelegramLogin = async (token: string) => {
@@ -1276,7 +1232,7 @@ export default function App() {
         return;
       }
       if (openMode === "telegram-webapp") {
-        setNotice("Бот открыт. Нажмите в нём «Авторизоваться», затем «Вернуться к событию». Если окно не переключилось, нажмите кнопку ещё раз.");
+        setNotice("");
         void finishTelegramLogin(payload.data.token).catch((authError) => {
           setNotice("");
           setError(authError instanceof Error ? authError.message : "Не получилось войти через Telegram");
@@ -1764,42 +1720,12 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
     if (isTelegramAuthLoading) return;
 
     const webApp = getTelegramWebApp();
-    if (webApp?.initData) {
-      setIsTelegramAuthLoading(true);
-      setTelegramAuthMessage("Подтверждаю вход через Telegram...");
-      try {
-        const response = await fetch("/api/auth/telegram-mini-app", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData: webApp.initData }),
-        });
-        const payload = await safeReadJson<{
-          ok: boolean;
-          data?: { id: string; name: string; phone?: string | null; telegramUsername?: string | null };
-          error?: string;
-        }>(response);
-
-        if (!payload.ok || !payload.data) throw new Error(payload.error || "Не получилось войти через Telegram");
-
-        onAuthenticated({
-          id: payload.data.id,
-          name: payload.data.name,
-          phone: payload.data.phone || (payload.data.telegramUsername ? `@${payload.data.telegramUsername}` : ""),
-        });
-      } catch (error) {
-        setTelegramAuthMessage(error instanceof Error ? error.message : "Не получилось войти через Telegram");
-      } finally {
-        setIsTelegramAuthLoading(false);
-      }
-      return;
-    }
-
     const userAgent = navigator.userAgent || "";
     const shouldOpenInCurrentWindow = /Telegram/i.test(userAgent);
     const pendingWindow = webApp?.openTelegramLink || shouldOpenInCurrentWindow ? null : window.open("", "_blank", "noopener,noreferrer");
 
     setIsTelegramAuthLoading(true);
-    setTelegramAuthMessage("Откроем бот «Собрались». Если Telegram спросит «Открыть?», нажмите OK, затем в боте нажмите «Авторизоваться».");
+    setTelegramAuthMessage("");
 
     const finishTelegramLogin = async (token: string) => {
       await pollTelegramLogin(token);
@@ -1828,7 +1754,7 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
         return;
       }
       if (openMode === "telegram-webapp") {
-        setTelegramAuthMessage("Бот открыт. Нажмите в нём «Авторизоваться», затем «Вернуться в приложение». Если окно не переключилось, нажмите кнопку ещё раз.");
+        setTelegramAuthMessage("");
         void finishTelegramLogin(payload.data.token).catch((error) => {
           setTelegramAuthMessage(error instanceof Error ? error.message : "Не получилось войти через Telegram");
         });
@@ -1850,21 +1776,20 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
         <Card className="relative overflow-hidden">
           <div className="absolute -right-20 -top-24 h-52 w-52 rounded-full bg-[#c59a55]/15 blur-2xl" aria-hidden="true" />
           <div className="relative">
-            <BrandLogoApproved caption="личный кабинет" symbolSize={48} />
-            <h1 className="mt-8 font-serif text-[2.7rem] font-normal leading-none tracking-[-0.01em] text-[#2b2a27] sm:text-[3.6rem]">
-              Войти в Собрались
-            </h1>
-            <p className="mt-4 text-base leading-7 text-[#7c746a]">
-              Telegram подтвердит профиль, а мы откроем кабинет, события и уведомления без лишней регистрации.
+            <BrandLogoApproved caption="вход" symbolSize={44} />
+            <p className="mt-7 text-sm leading-6 text-[#7c746a] sm:text-base">
+              Подтвердите Telegram, чтобы создать событие или открыть свои карточки.
             </p>
           </div>
 
           <button type="button" disabled={isTelegramAuthLoading} onClick={openTelegramAuth} className="relative mt-7 flex w-full items-center justify-center rounded-[22px] bg-[#7e8466] px-5 py-4 text-center font-semibold text-[#fffdf8] shadow-[0_18px_34px_rgba(89,96,71,0.22)] transition hover:-translate-y-0.5 hover:bg-[#596047] disabled:cursor-wait disabled:opacity-70">
-          {isTelegramAuthLoading ? "Жду подтверждение в Telegram..." : "Авторизоваться"}
+          {isTelegramAuthLoading ? "Откройте бот в Telegram" : "Войти в Собрались"}
           </button>
-          <p className="mt-4 rounded-[20px] border border-[#d8e4ef] bg-[#eaf4ff]/72 px-4 py-3 text-sm font-medium leading-6 text-[#315c82]">
-            {telegramAuthMessage || "После нажатия откроется бот «Собрались». В нём нажмите «Авторизоваться» — мы сохраним Telegram ID, имя и username для входа и уведомлений."}
-          </p>
+          {telegramAuthMessage && (
+            <p className="mt-4 rounded-[20px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/74 px-4 py-3 text-sm font-medium leading-6 text-[#7c746a]">
+              {telegramAuthMessage}
+            </p>
+          )}
           {IS_DEVELOPMENT && (
             <a href="/app?devEvent=1" className="mt-3 flex w-full items-center justify-center rounded-[20px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/80 px-5 py-3.5 text-sm font-semibold text-[#2b2a27] transition hover:-translate-y-0.5 hover:border-[#c59a55]/60 hover:shadow-[0_12px_26px_rgba(52,44,35,0.10)]">
               Открыть локальную demo-карточку
@@ -1878,12 +1803,12 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
 
 function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew, logout }: { events: EventRecord[]; isLoading: boolean; openEvent: (event: EventRecord) => void; deleteEvent: (id: string) => void; createNew: () => void; logout: () => void }) {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-9">
-      <div className="sobralis-surface flex flex-col justify-between gap-5 rounded-[34px] p-5 sm:flex-row sm:items-end sm:p-7">
+    <section className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-7">
+      <div className="sobralis-surface flex flex-col justify-between gap-4 rounded-[30px] p-5 sm:flex-row sm:items-center sm:p-6">
         <div>
           <span className="sobralis-chip">мои события</span>
-          <h1 className="sobralis-display mt-4 text-[2.6rem] leading-none sm:text-[3.8rem]">Карточки приглашений</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base">Здесь будут ваши встречи: ссылка для гостей, места, ожидание и аккуратный организаторский слой.</p>
+          <h1 className="sobralis-display mt-3 text-[2rem] leading-none sm:text-[2.8rem]">Карточки приглашений</h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[#7c746a]">Ваши встречи, ссылки для гостей, места и ожидание.</p>
         </div>
         {events.length > 0 && <button onClick={createNew} className="sobralis-button-primary shrink-0">Создать событие</button>}
       </div>
@@ -1920,7 +1845,7 @@ function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew, logou
         ))}
       </div>
       <div className="mt-7 flex justify-center">
-        <button onClick={logout} className="rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/72 px-5 py-3 text-sm font-semibold text-[#7c746a] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 hover:text-[#2b2a27]">
+        <button onClick={logout} className="rounded-full border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/56 px-4 py-2 text-xs font-semibold text-[#9a9188] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 hover:text-[#2b2a27]">
           Выйти из аккаунта
         </button>
       </div>

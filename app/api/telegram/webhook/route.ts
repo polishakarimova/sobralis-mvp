@@ -116,7 +116,15 @@ function deleteTelegramMessage(chatId: number | string, messageId: number): Tele
   };
 }
 
-function requiredConsentMessage(chatId: number | string) {
+function callbackDataWithToken(action: string, token?: string) {
+  return token ? `${action}:${token}` : action;
+}
+
+function callbackToken(data: string, action: string) {
+  return data.startsWith(`${action}:`) ? data.slice(action.length + 1) : undefined;
+}
+
+function requiredConsentMessage(chatId: number | string, loginToken?: string) {
   return telegramHtmlMessage(
     chatId,
     [
@@ -130,12 +138,12 @@ function requiredConsentMessage(chatId: number | string) {
       "Нажимая кнопку ниже, вы подтверждаете, что ознакомились с указанными документами и даёте согласие на обработку своего Telegram ID, имени и username для использования сервиса.",
     ].join("\n"),
     [
-      [{ text: "✅ Принимаю и даю согласие", callback_data: "required_consent_accept" }],
+      [{ text: "✅ Принимаю и даю согласие", callback_data: callbackDataWithToken("required_consent_accept", loginToken) }],
     ],
   );
 }
 
-function marketingConsentMessage(chatId: number | string) {
+function marketingConsentMessage(chatId: number | string, loginToken?: string) {
   return telegramHtmlMessage(
     chatId,
     [
@@ -148,8 +156,8 @@ function marketingConsentMessage(chatId: number | string) {
       "Это необязательно — можно пропустить.",
     ].join("\n"),
     [
-      [{ text: "✅ Да, согласна на рекламную рассылку", callback_data: "marketing_consent_yes" }],
-      [{ text: "Нет, спасибо", callback_data: "marketing_consent_no" }],
+      [{ text: "✅ Да, согласна на рекламную рассылку", callback_data: callbackDataWithToken("marketing_consent_yes", loginToken) }],
+      [{ text: "Нет, спасибо", callback_data: callbackDataWithToken("marketing_consent_no", loginToken) }],
     ],
   );
 }
@@ -178,6 +186,58 @@ async function recordRequiredBotConsents(userId: string) {
   ]);
 }
 
+async function hasRequiredBotConsents(userId: string) {
+  const consents = await prisma.consent.findMany({
+    where: {
+      userId,
+      value: true,
+      revokedAt: null,
+      type: {
+        in: [ConsentType.service_terms, ConsentType.personal_data, ConsentType.telegram_notifications],
+      },
+    },
+    select: { type: true },
+  });
+  const accepted = new Set(consents.map((consent) => consent.type));
+  return (
+    accepted.has(ConsentType.service_terms) &&
+    accepted.has(ConsentType.personal_data) &&
+    accepted.has(ConsentType.telegram_notifications)
+  );
+}
+
+async function hasMarketingConsentAnswer(userId: string) {
+  const consent = await prisma.consent.findFirst({
+    where: {
+      userId,
+      type: ConsentType.marketing_offers,
+      revokedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  return Boolean(consent);
+}
+
+async function loginCompleteMessage(chatId: number | string, token: string, userId: string, successText = "Готово. Теперь можно вернуться в приложение.") {
+  const completed = await completeTelegramLogin(token, userId);
+  const completedReturnTo = completed.ok ? completed.returnTo || "/app" : "/app";
+  return telegramMessage(
+    chatId,
+    completed.ok
+      ? successText
+      : "Ссылка для входа устарела. Откройте приложение и нажмите «Войти в Собрались» ещё раз.",
+    [
+      [
+        {
+          text: completedReturnTo.startsWith("/app?event=") ? "Вернуться к событию" : "Открыть приложение",
+          web_app: { url: `${getAppUrl()}${completed.ok ? appendLoginToken(completedReturnTo, token) : "/app"}` },
+        },
+      ],
+    ],
+  );
+}
+
 function eventInviteMessage(chatId: number | string, eventId: string) {
   return telegramMessage(
     chatId,
@@ -200,13 +260,17 @@ async function handleMessage(update: TelegramUpdate): Promise<TelegramWebhookRes
 
     if (payload.startsWith("login_")) {
       const token = payload.replace("login_", "");
-      return telegramMessage(
-        message.chat.id,
-        "Чтобы войти в «Собрались», нажмите «Авторизоваться». Мы сохраним ваш Telegram ID, имя и username, чтобы открыть личный кабинет и присылать уведомления по событиям.",
-        [
-          [{ text: "Авторизоваться", callback_data: `login_confirm:${token}` }],
-        ],
-      );
+      const user = await upsertTelegramUser(message.from, message.chat.id);
+
+      if (!(await hasRequiredBotConsents(user.id))) {
+        return requiredConsentMessage(message.chat.id, token);
+      }
+
+      if (!(await hasMarketingConsentAnswer(user.id))) {
+        return marketingConsentMessage(message.chat.id, token);
+      }
+
+      return loginCompleteMessage(message.chat.id, token, user.id, "Вы авторизованы. Теперь можно вернуться в приложение.");
     }
 
     if (payload.startsWith("event_")) {
@@ -242,10 +306,10 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookRe
 
   const data = callback.data || "";
 
-  if (data === "required_consent_accept") {
-    void upsertTelegramUser(callback.from, callback.message?.chat.id)
-      .then((user) => recordRequiredBotConsents(user.id))
-      .catch((error) => console.error("Telegram required consent save error", error));
+  if (data === "required_consent_accept" || data.startsWith("required_consent_accept:")) {
+    const loginToken = callbackToken(data, "required_consent_accept");
+    const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
+    await recordRequiredBotConsents(user.id);
 
     if (callback.message?.chat.id && callback.message.message_id) {
       return telegramMethods([
@@ -254,25 +318,33 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookRe
           [{ text: "✅ Готово", callback_data: "consent_step_done" }],
         ]),
         deleteTelegramMessage(callback.message.chat.id, callback.message.message_id),
-        marketingConsentMessage(callback.message.chat.id),
+        marketingConsentMessage(callback.message.chat.id, loginToken),
       ]);
     }
 
     if (callback.message?.chat.id) {
-      return telegramMethods([answerCallbackQuery(callback.id, "Готово"), marketingConsentMessage(callback.message.chat.id)]);
+      return telegramMethods([answerCallbackQuery(callback.id, "Готово"), marketingConsentMessage(callback.message.chat.id, loginToken)]);
     }
     return answerCallbackQuery(callback.id, "Готово");
   }
 
-  if (data === "marketing_consent_yes" || data === "marketing_consent_no") {
-    const accepted = data === "marketing_consent_yes";
-    void upsertTelegramUser(callback.from, callback.message?.chat.id)
-      .then((user) => recordConsent(user.id, ConsentType.marketing_offers, accepted))
-      .catch((error) => console.error("Telegram marketing consent save error", error));
+  if (
+    data === "marketing_consent_yes" ||
+    data === "marketing_consent_no" ||
+    data.startsWith("marketing_consent_yes:") ||
+    data.startsWith("marketing_consent_no:")
+  ) {
+    const accepted = data === "marketing_consent_yes" || data.startsWith("marketing_consent_yes:");
+    const loginToken = callbackToken(data, "marketing_consent_yes") || callbackToken(data, "marketing_consent_no");
+    const user = await upsertTelegramUser(callback.from, callback.message?.chat.id);
+    await recordConsent(user.id, ConsentType.marketing_offers, accepted);
 
     const finalText = accepted
       ? "Спасибо. Рекламная рассылка подключена. Теперь можно вернуться в приложение."
       : "Спасибо. Рекламная рассылка отключена. Теперь можно вернуться в приложение.";
+    const finalMessage = loginToken
+      ? await loginCompleteMessage(callback.message?.chat.id || callback.from.id, loginToken, user.id, finalText)
+      : mainMenuMessage(callback.message?.chat.id || callback.from.id, finalText);
 
     if (callback.message?.chat.id && callback.message.message_id) {
       return telegramMethods([
@@ -281,12 +353,12 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookRe
           [{ text: "✅ Спасибо за ответ", callback_data: "consent_step_done" }],
         ]),
         deleteTelegramMessage(callback.message.chat.id, callback.message.message_id),
-        mainMenuMessage(callback.message.chat.id, finalText),
+        finalMessage,
       ]);
     }
 
     if (callback.message?.chat.id) {
-      return telegramMethods([answerCallbackQuery(callback.id, "Спасибо за ответ"), mainMenuMessage(callback.message.chat.id, finalText)]);
+      return telegramMethods([answerCallbackQuery(callback.id, "Спасибо за ответ"), finalMessage]);
     }
     return answerCallbackQuery(callback.id, "Спасибо за ответ");
   }
@@ -318,7 +390,6 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookRe
         reply_markup: {
           inline_keyboard: completed.ok
             ? [
-                [{ text: "✅ Вы авторизованы", callback_data: "login_already_confirmed" }],
                 [
                   {
                     text: completedReturnTo.startsWith("/app?event=") ? "Вернуться к событию" : "Вернуться в приложение",
