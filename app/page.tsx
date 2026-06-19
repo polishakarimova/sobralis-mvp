@@ -8,6 +8,7 @@ import { PublicEventInvitationCard } from "@/components/event/PublicEventInvitat
 type Screen = "home" | "account" | "dashboard" | "kind" | "builder" | "event";
 type EventKind = "breakfast" | "bath" | "lunch" | "other";
 type ViewMode = "guest" | "organizer";
+type HomeMode = "guest" | "organizer";
 type ParticipantStatus = "interested" | "joined" | "invited_from_waitlist" | "cancelled";
 type PaymentMode = "none" | "manual";
 
@@ -553,6 +554,7 @@ export default function App() {
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [eventKind, setEventKind] = useState<EventKind>("breakfast");
   const [viewMode, setViewMode] = useState<ViewMode>("guest");
+  const [homeMode, setHomeMode] = useState<HomeMode>("guest");
   const [title, setTitle] = useState(defaults.breakfast.title);
   const [venue, setVenue] = useState("");
   const [mapUrl, setMapUrl] = useState("");
@@ -595,6 +597,7 @@ export default function App() {
 
   const applyAuthenticatedUser = useCallback((profile: CabinetUser) => {
     setCabinetUser(profile);
+    setHomeMode("organizer");
     setGuestName((current) => current || profile.name);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     setScreen(afterAuthScreen === "kind" ? "kind" : "dashboard");
@@ -638,6 +641,7 @@ export default function App() {
         };
 
         setCabinetUser(profile);
+        setHomeMode("organizer");
         setGuestName((current) => current || profile.name);
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
         const params = new URLSearchParams(window.location.search);
@@ -686,6 +690,7 @@ export default function App() {
         };
 
         setCabinetUser(profile);
+        setHomeMode("organizer");
         setGuestName((current) => current || profile.name);
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
         const params = new URLSearchParams(window.location.search);
@@ -811,9 +816,15 @@ export default function App() {
   }, []);
 
   const loadEvents = useCallback(async () => {
+    if (!cabinetUser?.id) {
+      setEvents([]);
+      setIsLoadingEvents(false);
+      return;
+    }
+
     setIsLoadingEvents(true);
     try {
-      const url = cabinetUser?.id ? `/api/events?organizerId=${cabinetUser.id}` : "/api/events";
+      const url = `/api/events?organizerId=${cabinetUser.id}`;
       const response = await fetch(url, { cache: "no-store" });
       const payload = await safeReadJson<{ ok: boolean; data: ApiEvent[]; error?: string }>(response);
       if (payload.ok) setEvents(payload.data.map(mapApiEvent));
@@ -837,6 +848,17 @@ export default function App() {
 
     return () => window.clearTimeout(timer);
   }, [cabinetUser, loadEvents]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.location.pathname.startsWith("/app")) return;
+
+    const timer = window.setTimeout(() => {
+      void loadEvents();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [cabinetUser?.id, loadEvents]);
 
   async function refreshActiveEvent(id: string) {
     const response = await fetch(`/api/events/${id}`, { cache: "no-store" });
@@ -898,6 +920,7 @@ export default function App() {
     setGuestName("");
     setGuestComment("");
     setGuestReservation(null);
+    setHomeMode("guest");
     setNotice("Вы вышли из кабинета.");
     setError("");
     setScreen("home");
@@ -991,7 +1014,7 @@ export default function App() {
     setScreen("event");
   }
 
-  function openEvent(event: EventRecord) {
+  function hydrateEventState(event: EventRecord) {
     const savedVisual = eventVisualsState[event.id];
     setActiveEventId(event.id);
     setEventKind(event.kind);
@@ -1019,8 +1042,25 @@ export default function App() {
     setError("");
     setGuestReservation(null);
     setShareCopied(false);
+  }
+
+  function openEvent(event: EventRecord) {
+    hydrateEventState(event);
     setViewMode("guest");
     setScreen("event");
+  }
+
+  function openOrganizerEvent(event: EventRecord) {
+    hydrateEventState(event);
+    setViewMode("organizer");
+    setScreen("event");
+  }
+
+  function editEvent(event: EventRecord) {
+    hydrateEventState(event);
+    setViewMode("organizer");
+    setCreateAttempted(false);
+    setScreen("builder");
   }
 
   useEffect(() => {
@@ -1274,7 +1314,19 @@ export default function App() {
       <div className="relative z-10">
         <Header goHome={goHome} openDashboard={openDashboard} cabinetUser={cabinetUser} />
 
-        {screen === "home" && <Home startCreate={startCreate} cabinetUser={cabinetUser} />}
+        {screen === "home" && (
+          <Home
+            startCreate={startCreate}
+            openDashboard={openDashboard}
+            cabinetUser={cabinetUser}
+            events={events}
+            isLoadingEvents={isLoadingEvents}
+            homeMode={homeMode}
+            setHomeMode={setHomeMode}
+            openOrganizerEvent={openOrganizerEvent}
+            editEvent={editEvent}
+          />
+        )}
         {screen === "account" && <Account goHome={goHome} onAuthenticated={applyAuthenticatedUser} returnTo={afterAuthScreen === "kind" ? "/app?intent=create" : "/profile/events"} />}
         {screen === "dashboard" && <Dashboard events={events} isLoading={isLoadingEvents} openEvent={openEvent} deleteEvent={deleteEvent} createNew={() => setScreen("kind")} logout={logout} />}
         {screen === "kind" && <KindPicker goBack={() => setScreen("home")} chooseKind={chooseKind} />}
@@ -1395,9 +1447,29 @@ function Header({ goHome, openDashboard, cabinetUser }: { goHome: () => void; op
   );
 }
 
-function Home({ startCreate, cabinetUser }: { startCreate: () => void; cabinetUser: CabinetUser | null }) {
+function Home({
+  startCreate,
+  openDashboard,
+  cabinetUser,
+  events,
+  isLoadingEvents,
+  homeMode,
+  setHomeMode,
+  openOrganizerEvent,
+  editEvent,
+}: {
+  startCreate: () => void;
+  openDashboard: () => void;
+  cabinetUser: CabinetUser | null;
+  events: EventRecord[];
+  isLoadingEvents: boolean;
+  homeMode: HomeMode;
+  setHomeMode: (value: HomeMode) => void;
+  openOrganizerEvent: (event: EventRecord) => void;
+  editEvent: (event: EventRecord) => void;
+}) {
   return (
-    <section className="mx-auto grid min-h-[calc(100svh-92px)] max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12 lg:py-10">
+    <section className="mx-auto grid min-h-[calc(100svh-92px)] max-w-6xl items-center gap-7 px-4 py-7 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:gap-10 lg:py-9">
       <div className="max-w-xl text-center lg:text-left">
         <span className="sobralis-chip">приглашение в одну ссылку</span>
         <h1 className="mt-5 font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.3rem]">
@@ -1415,81 +1487,188 @@ function Home({ startCreate, cabinetUser }: { startCreate: () => void; cabinetUs
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">завтраки · бани · ужины · камерные встречи</p>
       </div>
 
-      <HomeInvitationMock />
+      <div className="sobralis-surface mx-auto w-full max-w-[660px] rounded-[34px] p-4 shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-5">
+        <div className="flex flex-col gap-4 border-b border-[rgba(43,42,39,0.10)] pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <span className="sobralis-chip">{homeMode === "guest" ? "гостевой режим" : "организатор"}</span>
+            <h2 className="sobralis-display mt-3 text-[2rem] leading-none sm:text-[2.6rem]">
+              {homeMode === "guest" ? "Ближайшие приглашения" : "Мои события"}
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#f5efe6]/82 p-1 text-sm font-semibold text-[#7c746a]">
+            <button
+              type="button"
+              onClick={() => setHomeMode("guest")}
+              className={`rounded-full px-4 py-2 transition ${homeMode === "guest" ? "bg-[#fffdf8] text-[#2b2a27] shadow-[0_10px_22px_rgba(52,44,35,0.10)]" : "hover:text-[#2b2a27]"}`}
+            >
+              Я гость
+            </button>
+            <button
+              type="button"
+              onClick={() => setHomeMode("organizer")}
+              className={`rounded-full px-4 py-2 transition ${homeMode === "organizer" ? "bg-[#fffdf8] text-[#2b2a27] shadow-[0_10px_22px_rgba(52,44,35,0.10)]" : "hover:text-[#2b2a27]"}`}
+            >
+              Я организатор
+            </button>
+          </div>
+        </div>
+
+        {homeMode === "guest" ? (
+          <HomeGuestPanel startCreate={startCreate} />
+        ) : (
+          <HomeOrganizerPanel
+            cabinetUser={cabinetUser}
+            events={events}
+            isLoadingEvents={isLoadingEvents}
+            startCreate={startCreate}
+            openDashboard={openDashboard}
+            openOrganizerEvent={openOrganizerEvent}
+            editEvent={editEvent}
+          />
+        )}
+      </div>
     </section>
   );
 }
 
-function HomeInvitationMock() {
+function HomeGuestPanel({ startCreate }: { startCreate: () => void }) {
   return (
-    <div className="relative mx-auto w-full max-w-[640px]">
-      <div className="absolute -left-4 top-8 hidden rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 px-5 py-4 shadow-[0_18px_48px_rgba(52,44,35,0.12)] backdrop-blur-xl sm:block">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#596047]">места</div>
-        <div className="mt-1 font-serif text-3xl font-normal text-[#2b2a27]">6 / 12</div>
-      </div>
-      <div className="absolute -right-2 bottom-10 hidden rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 px-5 py-4 shadow-[0_18px_48px_rgba(52,44,35,0.12)] backdrop-blur-xl sm:block">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#596047]">ожидание</div>
-        <div className="mt-1 font-serif text-2xl font-normal text-[#2b2a27]">2 человека</div>
-      </div>
-
-      <article className="relative overflow-hidden rounded-[34px] border border-[rgba(43,42,39,0.14)] bg-[#fffdf8]/92 p-6 shadow-[0_30px_90px_rgba(52,44,35,0.16)] sm:p-8">
-        <div className="absolute inset-0 opacity-30" aria-hidden="true" style={{ backgroundImage: "linear-gradient(rgba(43,42,39,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(43,42,39,0.018) 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
-        <div className="relative z-10 grid min-h-[420px] gap-6 sm:grid-cols-[1fr_0.78fr] sm:items-center">
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#596047]">приглашение</div>
-            <h2 className="mt-5 max-w-[330px] font-serif text-[4.1rem] font-normal leading-[0.94] tracking-[-0.01em] text-[#2b2a27] sm:text-[5.1rem]">
-              Завтрак клуба
-            </h2>
-            <p className="mt-5 max-w-[300px] text-base leading-7 text-[#7c746a]">
-              Тёплые люди, вдохновляющий разговор и вкусное утро вместе.
-            </p>
-            <div className="mt-6 grid gap-3 text-sm font-semibold text-[#2b2a27]">
-              <span>24 мая, суббота</span>
-              <span>10:00 — 12:30</span>
-              <span>Москва, Патрики, 12</span>
-            </div>
+    <div className="pt-5">
+      <div className="relative overflow-hidden rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 p-5 shadow-[0_16px_44px_rgba(52,44,35,0.07)] sm:p-6">
+        <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-[#efe7da] opacity-80 blur-2xl" aria-hidden="true" />
+        <div className="relative">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#596047]">для гостя</div>
+          <h3 className="sobralis-display mt-3 text-[2.4rem] leading-none sm:text-[3.1rem]">Откройте приглашение</h3>
+          <p className="mt-3 max-w-md text-sm leading-6 text-[#7c746a] sm:text-base">
+            Когда организатор пришлёт ссылку на событие, здесь появится красивая карточка с датой, местом и кнопкой записи.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {["Дата и место", "Свободные места", "Запись в один клик"].map((item) => (
+              <span key={item} className="rounded-[20px] border border-[rgba(43,42,39,0.10)] bg-[#f5efe6]/70 px-4 py-3 text-sm font-semibold text-[#596047]">
+                {item}
+              </span>
+            ))}
           </div>
-
-          <div className="relative min-h-[310px] overflow-hidden rounded-[999px_999px_30px_30px] border border-white/70 shadow-[0_20px_48px_rgba(52,44,35,0.18)] sm:min-h-[390px]">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: "url('/event-images/breakfast/28945079a4b89696466660ea791b099a.webp')" }}
-              aria-hidden="true"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#2b2a27]/18 to-transparent" aria-hidden="true" />
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button type="button" onClick={startCreate} className="sobralis-button-primary text-sm">
+              Создать своё событие
+            </button>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#b88768]">без лишних таблиц и чатов</span>
           </div>
         </div>
-
-        <div className="relative z-10 mt-5 grid gap-4 rounded-[26px] border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/76 p-4 sm:grid-cols-[0.85fr_1fr]">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#596047]">места</div>
-            <div className="mt-1 font-serif text-3xl font-normal text-[#2b2a27]">6 <span className="text-base text-[#7c746a]">из 12</span></div>
-            <div className="mt-3 h-1.5 max-w-36 overflow-hidden rounded-full bg-[#e4dccf]">
-              <div className="h-full w-1/2 rounded-full bg-[#7e8466]" />
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#596047]">гости</div>
-            <div className="mt-3 flex -space-x-2">
-              {["А", "М", "К", "Л", "+2"].map((item, index) => (
-                <span key={item} className={`grid h-10 w-10 place-items-center rounded-full border-2 border-[#fffdf8] text-sm font-bold text-white shadow-sm ${index === 0 ? "bg-[#b88768]" : index === 1 ? "bg-[#7e8466]" : index === 2 ? "bg-[#c59a55]" : index === 3 ? "bg-[#c9baa6]" : "bg-[#efe7da] text-[#7c746a]"}`}>
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="sm:col-span-2">
-            <div className="h-px bg-[rgba(43,42,39,0.10)]" />
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button className="rounded-[20px] bg-[#7e8466] px-7 py-3.5 text-sm font-semibold text-[#fffdf8] shadow-[0_14px_28px_rgba(89,96,71,0.22)]">
-                Я иду
-              </button>
-              <span className="text-sm font-semibold text-[#596047]">Событие собрано</span>
-            </div>
-          </div>
-        </div>
-      </article>
+      </div>
     </div>
+  );
+}
+
+function HomeOrganizerPanel({
+  cabinetUser,
+  events,
+  isLoadingEvents,
+  startCreate,
+  openDashboard,
+  openOrganizerEvent,
+  editEvent,
+}: {
+  cabinetUser: CabinetUser | null;
+  events: EventRecord[];
+  isLoadingEvents: boolean;
+  startCreate: () => void;
+  openDashboard: () => void;
+  openOrganizerEvent: (event: EventRecord) => void;
+  editEvent: (event: EventRecord) => void;
+}) {
+  if (!cabinetUser) {
+    return (
+      <div className="pt-5">
+        <div className="rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 p-5 shadow-[0_16px_44px_rgba(52,44,35,0.07)] sm:p-6">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#596047]">нужен вход</div>
+          <h3 className="sobralis-display mt-3 text-[2.35rem] leading-none sm:text-[3rem]">События появятся после входа</h3>
+          <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base">
+            Мы покажем только ваши карточки и организаторские действия после авторизации через Telegram.
+          </p>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <button type="button" onClick={openDashboard} className="sobralis-button-primary text-sm">Войти</button>
+            <button type="button" onClick={startCreate} className="sobralis-button-secondary text-sm">Создать событие</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-5">
+      {isLoadingEvents && <EmptyState title="Загружаю события" text="Проверяю ваши карточки в базе." />}
+      {!isLoadingEvents && events.length === 0 && (
+        <EmptyState
+          title="Пока нет событий"
+          text="Создайте первую карточку и отправьте гостям одну красивую ссылку."
+          action={<button type="button" onClick={startCreate} className="sobralis-button-primary">Создать событие</button>}
+        />
+      )}
+      {!isLoadingEvents && events.length > 0 && (
+        <div className="grid gap-4">
+          {events.slice(0, 4).map((event) => (
+            <HomeOrganizerEventCard key={event.id} event={event} openOrganizerEvent={openOrganizerEvent} editEvent={editEvent} />
+          ))}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" onClick={startCreate} className="sobralis-button-primary text-sm">Создать событие</button>
+            <button type="button" onClick={openDashboard} className="sobralis-button-secondary text-sm">Все события</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HomeOrganizerEventCard({
+  event,
+  openOrganizerEvent,
+  editEvent,
+}: {
+  event: EventRecord;
+  openOrganizerEvent: (event: EventRecord) => void;
+  editEvent: (event: EventRecord) => void;
+}) {
+  const seatsTaken = event.participants.filter((participant) => participant.status !== "cancelled").length;
+  const seatsTotal = Math.max(event.maxGuests, 1);
+  const progress = Math.min(100, Math.round((seatsTaken / seatsTotal) * 100));
+
+  return (
+    <article className="relative overflow-hidden rounded-[28px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 shadow-[0_16px_44px_rgba(52,44,35,0.08)]">
+      <button
+        type="button"
+        onClick={() => editEvent(event)}
+        className="absolute right-3 top-3 z-10 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/90 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#596047] shadow-[0_10px_24px_rgba(52,44,35,0.10)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55"
+      >
+        Редактировать
+      </button>
+      <div className="grid gap-0 sm:grid-cols-[150px_1fr]">
+        <EventThumb event={event} />
+        <div className="p-4 pr-4 sm:p-5 sm:pr-36">
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#596047]">{formatEventDateLabel(event.date)}</div>
+          <h3 className="sobralis-display mt-2 text-[2rem] leading-none sm:text-[2.6rem]">{event.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[#7c746a]">{event.venue || "Место не указано"}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[20px] bg-[#f5efe6]/80 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#596047]">места</div>
+              <div className="mt-1 font-serif text-2xl text-[#2b2a27]">{seatsTaken} <span className="text-sm text-[#7c746a]">из {event.maxGuests}</span></div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e4dccf]">
+                <div className="h-full rounded-full bg-[#7e8466]" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+            <div className="rounded-[20px] bg-[#f5efe6]/80 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#596047]">ожидание</div>
+              <div className="mt-1 font-serif text-2xl text-[#2b2a27]">{event.waitlist.length} <span className="text-sm text-[#7c746a]">чел.</span></div>
+              <p className="mt-1 text-xs text-[#7c746a]">без гостевой кнопки записи</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => openOrganizerEvent(event)} className="sobralis-button-secondary mt-4 w-full text-sm sm:w-auto">
+            Подробнее
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
