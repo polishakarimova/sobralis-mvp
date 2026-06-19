@@ -1468,11 +1468,64 @@ function Home({
   openOrganizerEvent: (event: EventRecord) => void;
   editEvent: (event: EventRecord) => void;
 }) {
+  const hasOrganizerEvents = events.length > 0;
+
+  if (!cabinetUser) {
+    return (
+      <section className="mx-auto flex min-h-[calc(100svh-92px)] max-w-5xl items-center px-4 py-7 sm:px-6 lg:py-9">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.4rem]">
+            Красиво собрать своих
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[#7c746a] sm:text-lg sm:leading-8">
+            Создайте красивую карточку встречи: дата, место, гости, места и напоминания — без хаоса в чате.
+          </p>
+          <div className="mt-7 flex justify-center">
+            <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
+          </div>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">завтраки · бани · ужины · камерные встречи</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!hasOrganizerEvents && isLoadingEvents) {
+    return (
+      <section className="mx-auto flex min-h-[calc(100svh-92px)] max-w-5xl items-center px-4 py-7 sm:px-6 lg:py-9">
+        <div className="sobralis-surface mx-auto w-full max-w-2xl rounded-[34px] p-6 text-center shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-8">
+          <h1 className="font-serif text-[2.8rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.2rem]">
+            Красиво собрать своих
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base sm:leading-7">
+            Проверяем ваши события.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!hasOrganizerEvents) {
+    return (
+      <section className="mx-auto flex min-h-[calc(100svh-92px)] max-w-5xl items-center px-4 py-7 sm:px-6 lg:py-9">
+        <div className="sobralis-surface mx-auto w-full max-w-2xl rounded-[34px] p-6 text-center shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-8">
+          <h1 className="font-serif text-[2.8rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.2rem]">
+            Красиво собрать своих
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base sm:leading-7">
+            Пока у вас нет событий. Создайте первую карточку и отправьте гостям одну красивую ссылку.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto grid min-h-[calc(100svh-92px)] max-w-6xl items-center gap-7 px-4 py-7 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:gap-10 lg:py-9">
       <div className="max-w-xl text-center lg:text-left">
-        <span className="sobralis-chip">приглашение в одну ссылку</span>
-        <h1 className="mt-5 font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.3rem]">
+        <h1 className="font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.3rem]">
           Красиво собрать своих
         </h1>
         <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-[#7c746a] sm:text-lg sm:leading-8 lg:mx-0">
@@ -1480,9 +1533,6 @@ function Home({
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
           <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
-          <span className="rounded-full border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/72 px-5 py-3 text-center text-sm font-semibold text-[#596047]">
-            {cabinetUser ? "Откроем выбор формата встречи" : "Сначала подтвердим Telegram"}
-          </span>
         </div>
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7e8466]">завтраки · бани · ужины · камерные встречи</p>
       </div>
@@ -1538,9 +1588,9 @@ function HomeGuestPanel({ startCreate }: { startCreate: () => void }) {
         <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-[#efe7da] opacity-80 blur-2xl" aria-hidden="true" />
         <div className="relative">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#596047]">для гостя</div>
-          <h3 className="sobralis-display mt-3 text-[2.4rem] leading-none sm:text-[3.1rem]">Откройте приглашение</h3>
+          <h3 className="sobralis-display mt-3 text-[2.4rem] leading-none sm:text-[3.1rem]">Пока нет приглашений</h3>
           <p className="mt-3 max-w-md text-sm leading-6 text-[#7c746a] sm:text-base">
-            Когда организатор пришлёт ссылку на событие, здесь появится красивая карточка с датой, местом и кнопкой записи.
+            Когда вам пришлют ссылку на событие и вы отметите, что идёте, гостевая карточка появится в этом режиме.
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             {["Дата и место", "Свободные места", "Запись в один клик"].map((item) => (
