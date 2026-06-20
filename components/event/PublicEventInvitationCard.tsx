@@ -257,11 +257,11 @@ function TelegramGate({ eventTitle, isLoading, onStart }: { eventTitle: string; 
     <div className={styles.telegramGate}>
       <div>
         <span>вход через Telegram</span>
-        <h2>Авторизуйтесь, чтобы занять место</h2>
+        <h2>Войдите, чтобы занять место</h2>
         <p>Бот подтвердит ваш профиль и сможет прислать уведомление по событию «{eventTitle}» или листу ожидания.</p>
       </div>
       <button type="button" disabled={isLoading} className={styles.primaryButton} onClick={onStart}>
-        {isLoading ? "Жду подтверждение..." : "Авторизоваться"}
+        {isLoading ? "Проверяю вход..." : "Войти в Собрались"}
       </button>
     </div>
   );

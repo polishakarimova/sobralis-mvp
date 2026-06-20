@@ -735,7 +735,7 @@ export default function App() {
 
     let cancelled = false;
     const timer = window.setTimeout(async () => {
-      setNotice("Проверяю подтверждение Telegram. Если вы уже нажали «Авторизоваться» в боте, вход продолжится автоматически.");
+      setNotice("Проверяю подтверждение Telegram. Если вы уже завершили вход в боте, приложение продолжит автоматически.");
       setError("");
 
       try {
@@ -765,7 +765,7 @@ export default function App() {
       } catch {
         if (!cancelled) {
           setNotice("");
-          setError("Не получилось завершить вход. Нажмите «Авторизоваться» ещё раз и подтвердите вход в боте.");
+          setError("Не получилось завершить вход. Нажмите «Войти в Собрались» ещё раз и пройдите шаги в боте.");
         }
       }
     }, 0);
@@ -1187,7 +1187,7 @@ export default function App() {
       await new Promise((resolve) => window.setTimeout(resolve, 1000));
     }
 
-    throw new Error("Вход не подтвердился. Откройте бот и нажмите «Авторизоваться».");
+    throw new Error("Вход не подтвердился. Откройте бот и завершите вход.");
   }
 
   async function startTelegramLoginForEvent(eventId: string) {
@@ -1713,7 +1713,7 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
       await new Promise((resolve) => window.setTimeout(resolve, 1000));
     }
 
-    throw new Error("Вход не подтвердился. Нажмите кнопку ещё раз, затем в боте нажмите «Авторизоваться».");
+    throw new Error("Вход не подтвердился. Нажмите кнопку ещё раз и завершите вход в боте.");
   }
 
   async function openTelegramAuth() {

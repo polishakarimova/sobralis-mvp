@@ -316,10 +316,10 @@ export async function sendTelegramLoginRequestMessage(chatId: number | string, t
     body: JSON.stringify({
       chat_id: chatId,
       text:
-        "Чтобы войти в «Собрались», нажмите «Авторизоваться». Мы сохраним ваш Telegram ID, имя и username, чтобы открыть личный кабинет и присылать уведомления по событиям.",
+        "Чтобы войти в «Собрались», нажмите «Войти в Собрались». Мы сохраним ваш Telegram ID, имя и username, чтобы открыть личный кабинет и присылать уведомления по событиям.",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "Авторизоваться", callback_data: `login_confirm:${tokenValue}` }],
+          [{ text: "Войти в Собрались", callback_data: `login_confirm:${tokenValue}` }],
           [{ text: "Открыть приложение", web_app: { url: `${appUrl}/profile/events` } }],
         ],
       },

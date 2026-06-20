@@ -385,7 +385,7 @@ async function handleCallback(update: TelegramUpdate): Promise<TelegramWebhookRe
         message_id: callback.message.message_id,
         text: completed.ok
           ? "✅ Вы авторизованы.\n\nТеперь можно вернуться в приложение и продолжить."
-          : "Не получилось подтвердить вход: ссылка устарела. Вернитесь на сайт и нажмите «Авторизоваться» ещё раз.",
+          : "Не получилось подтвердить вход: ссылка устарела. Вернитесь в приложение и нажмите «Войти в Собрались» ещё раз.",
         disable_web_page_preview: true,
         reply_markup: {
           inline_keyboard: completed.ok
