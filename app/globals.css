@@ -45,8 +45,8 @@ body::selection {
   background: rgba(255, 253, 248, 0.88);
   padding: 0.74rem 0.92rem;
   color: var(--sobralis-text);
-  font-weight: 500;
-  font-size: 0.92rem;
+  font-weight: 400;
+  font-size: 0.9rem;
   outline: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 160ms ease;
@@ -95,7 +95,7 @@ body::selection {
   justify-content: center;
   border-radius: 18px;
   padding: 0.72rem 1.08rem;
-  font-weight: 650;
+  font-weight: 600;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
