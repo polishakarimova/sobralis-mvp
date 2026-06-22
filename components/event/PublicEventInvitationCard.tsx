@@ -57,28 +57,28 @@ function getTitleStyle(title: string) {
 
   if (compactLength > 56) {
     return {
-      "--event-title-size": "clamp(32px, 4vw, 48px)",
-      "--event-title-mobile-size": "clamp(32px, 10vw, 42px)",
+      "--event-title-size": "clamp(30px, 3.8vw, 44px)",
+      "--event-title-mobile-size": "clamp(30px, 9vw, 38px)",
     } as CSSProperties;
   }
 
   if (compactLength > 40) {
     return {
-      "--event-title-size": "clamp(36px, 4.4vw, 54px)",
-      "--event-title-mobile-size": "clamp(34px, 10vw, 48px)",
+      "--event-title-size": "clamp(34px, 4.2vw, 50px)",
+      "--event-title-mobile-size": "clamp(32px, 9.5vw, 44px)",
     } as CSSProperties;
   }
 
   if (compactLength > 28) {
     return {
-      "--event-title-size": "clamp(40px, 5vw, 60px)",
-      "--event-title-mobile-size": "clamp(38px, 12vw, 54px)",
+      "--event-title-size": "clamp(38px, 4.8vw, 56px)",
+      "--event-title-mobile-size": "clamp(34px, 10.5vw, 50px)",
     } as CSSProperties;
   }
 
   return {
-    "--event-title-size": "clamp(46px, 5.4vw, 66px)",
-    "--event-title-mobile-size": "clamp(42px, 14vw, 60px)",
+    "--event-title-size": "clamp(42px, 5vw, 62px)",
+    "--event-title-mobile-size": "clamp(38px, 12vw, 54px)",
   } as CSSProperties;
 }
 

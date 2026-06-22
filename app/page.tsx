@@ -1382,15 +1382,15 @@ function Header({ goHome, openDashboard, cabinetUser }: { goHome: () => void; op
   const initials = cabinetUser?.name?.trim() ? cabinetUser.name.trim().slice(0, 1).toUpperCase() : "ЛК";
 
   return (
-    <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-[26px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 px-3 py-2.5 shadow-[0_18px_50px_rgba(52,44,35,0.10)] backdrop-blur-2xl sm:px-4">
-        <button onClick={goHome} className="min-w-0 flex-1 rounded-[20px] px-1 text-left transition hover:opacity-80" aria-label="На главную">
-          <BrandLogoApproved caption="Удобно собрать своих" symbolSize={38} compact />
+    <header className="sticky top-0 z-40 px-2 pt-2 sm:px-6 sm:pt-4">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 rounded-[22px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 px-2.5 py-2 shadow-[0_14px_34px_rgba(52,44,35,0.10)] backdrop-blur-2xl sm:px-4 sm:py-2.5">
+        <button onClick={goHome} className="min-w-0 flex-1 rounded-[18px] px-1 text-left transition hover:opacity-80" aria-label="На главную">
+          <BrandLogoApproved caption="Удобно собрать своих" symbolSize={34} compact />
         </button>
-        <button onClick={openDashboard} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 px-3 py-2 text-sm font-semibold text-[#2b2a27] shadow-[0_10px_24px_rgba(52,44,35,0.09)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 sm:px-4">
+        <button onClick={openDashboard} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/88 px-2.5 py-1.5 text-sm font-semibold text-[#2b2a27] shadow-[0_8px_20px_rgba(52,44,35,0.08)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 sm:px-4 sm:py-2">
           {cabinetUser ? (
             <>
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7e8466] text-xs font-bold text-[#fffdf8]">{initials}</span>
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7e8466] text-xs font-bold text-[#fffdf8] shadow-[0_8px_18px_rgba(89,96,71,0.18)]">{initials}</span>
               <span className="hidden sm:inline">Личный кабинет</span>
               <span className="sm:hidden">ЛК</span>
             </>
@@ -1428,18 +1428,18 @@ function Home({
 
   if (!cabinetUser) {
     return (
-      <section className="mx-auto flex min-h-[calc(100svh-92px)] max-w-5xl items-center px-4 py-7 sm:px-6 lg:py-9">
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.4rem]">
+      <section className="mx-auto flex min-h-[calc(100svh-76px)] max-w-4xl items-center px-4 py-5 sm:px-6 lg:py-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h1 className="font-serif text-[2.55rem] font-normal leading-[0.98] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.2rem] lg:text-[4.8rem]">
             Красиво собрать своих
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[#7c746a] sm:text-lg sm:leading-8">
+          <p className="mx-auto mt-4 max-w-lg text-[0.95rem] leading-6 text-[#7c746a] sm:text-base sm:leading-7">
             Создайте красивую карточку встречи: дата, место, гости, места и напоминания — без хаоса в чате.
           </p>
-          <div className="mt-7 flex justify-center">
-            <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
+          <div className="mt-6 flex justify-center">
+            <button onClick={startCreate} className="sobralis-button-primary text-[0.95rem]">Создать событие</button>
           </div>
-          <p className="mt-8 whitespace-nowrap text-[9px] font-light uppercase tracking-[0.22em] text-[#7e8466] sm:text-[10px] sm:tracking-[0.28em]">завтраки · бани · ужины · камерные встречи</p>
+          <p className="mx-auto mt-7 max-w-full whitespace-nowrap text-[8px] font-light uppercase tracking-[0.15em] text-[#7e8466] sm:text-[10px] sm:tracking-[0.28em]">завтраки · бани · ужины · камерные встречи</p>
         </div>
       </section>
     );
@@ -1447,9 +1447,9 @@ function Home({
 
   if (!hasOrganizerEvents && isLoadingEvents) {
     return (
-      <section className="mx-auto flex min-h-[calc(100svh-92px)] max-w-5xl items-center px-4 py-7 sm:px-6 lg:py-9">
-        <div className="sobralis-surface mx-auto w-full max-w-2xl rounded-[34px] p-6 text-center shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-8">
-          <h1 className="font-serif text-[2.8rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.2rem]">
+      <section className="mx-auto flex min-h-[calc(100svh-76px)] max-w-4xl items-center px-4 py-5 sm:px-6 lg:py-8">
+        <div className="sobralis-surface mx-auto w-full max-w-xl rounded-[28px] p-5 text-center shadow-[0_22px_62px_rgba(52,44,35,0.12)] sm:p-7">
+          <h1 className="font-serif text-[2.25rem] font-normal leading-[0.98] tracking-[-0.01em] text-[#2b2a27] sm:text-[3.5rem]">
             Красиво собрать своих
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base sm:leading-7">
@@ -1462,16 +1462,16 @@ function Home({
 
   if (!hasOrganizerEvents) {
     return (
-      <section className="mx-auto flex min-h-[calc(100svh-92px)] max-w-5xl items-center px-4 py-7 sm:px-6 lg:py-9">
-        <div className="sobralis-surface mx-auto w-full max-w-2xl rounded-[34px] p-6 text-center shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-8">
-          <h1 className="font-serif text-[2.8rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.2rem]">
+      <section className="mx-auto flex min-h-[calc(100svh-76px)] max-w-4xl items-center px-4 py-5 sm:px-6 lg:py-8">
+        <div className="sobralis-surface mx-auto w-full max-w-xl rounded-[28px] p-5 text-center shadow-[0_22px_62px_rgba(52,44,35,0.12)] sm:p-7">
+          <h1 className="font-serif text-[2.25rem] font-normal leading-[0.98] tracking-[-0.01em] text-[#2b2a27] sm:text-[3.5rem]">
             Красиво собрать своих
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#7c746a] sm:text-base sm:leading-7">
             Пока у вас нет событий. Создайте первую карточку и отправьте гостям одну красивую ссылку.
           </p>
-          <div className="mt-6 flex justify-center">
-            <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
+          <div className="mt-5 flex justify-center">
+            <button onClick={startCreate} className="sobralis-button-primary text-[0.95rem]">Создать событие</button>
           </div>
         </div>
       </section>
@@ -1479,40 +1479,40 @@ function Home({
   }
 
   return (
-    <section className="mx-auto grid min-h-[calc(100svh-92px)] max-w-6xl items-center gap-7 px-4 py-7 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:gap-10 lg:py-9">
+    <section className="mx-auto grid min-h-[calc(100svh-76px)] max-w-5xl items-center gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[0.82fr_1.18fr] lg:gap-8 lg:py-8">
       <div className="max-w-xl text-center lg:text-left">
-        <h1 className="font-serif text-[3.1rem] font-normal leading-[0.96] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.8rem] lg:text-[5.3rem]">
+        <h1 className="font-serif text-[2.55rem] font-normal leading-[0.98] tracking-[-0.01em] text-[#2b2a27] sm:text-[4.2rem] lg:text-[4.6rem]">
           Красиво собрать своих
         </h1>
-        <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-[#7c746a] sm:text-lg sm:leading-8 lg:mx-0">
+        <p className="mx-auto mt-4 max-w-lg text-[0.95rem] leading-6 text-[#7c746a] sm:text-base sm:leading-7 lg:mx-0">
           Создайте красивую карточку встречи: дата, место, гости, места и напоминания — без хаоса в чате.
         </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-          <button onClick={startCreate} className="sobralis-button-primary text-base">Создать событие</button>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+          <button onClick={startCreate} className="sobralis-button-primary text-[0.95rem]">Создать событие</button>
         </div>
-        <p className="mt-8 whitespace-nowrap text-[9px] font-light uppercase tracking-[0.22em] text-[#7e8466] sm:text-[10px] sm:tracking-[0.28em]">завтраки · бани · ужины · камерные встречи</p>
+        <p className="mt-7 whitespace-nowrap text-[8px] font-light uppercase tracking-[0.15em] text-[#7e8466] sm:text-[10px] sm:tracking-[0.28em]">завтраки · бани · ужины · камерные встречи</p>
       </div>
 
-      <div className="sobralis-surface mx-auto w-full max-w-[660px] rounded-[34px] p-4 shadow-[0_28px_80px_rgba(52,44,35,0.13)] sm:p-5">
-        <div className="flex flex-col gap-4 border-b border-[rgba(43,42,39,0.10)] pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="sobralis-surface mx-auto w-full max-w-[620px] rounded-[28px] p-3.5 shadow-[0_22px_62px_rgba(52,44,35,0.12)] sm:p-5">
+        <div className="flex flex-col gap-3 border-b border-[rgba(43,42,39,0.10)] pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="sobralis-chip">{homeMode === "guest" ? "гостевой режим" : "организатор"}</span>
-            <h2 className="sobralis-display mt-3 text-[2rem] leading-none sm:text-[2.6rem]">
+            <h2 className="sobralis-display mt-2 text-[1.65rem] leading-none sm:text-[2.35rem]">
               {homeMode === "guest" ? "Ближайшие приглашения" : "Мои события"}
             </h2>
           </div>
-          <div className="grid grid-cols-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#f5efe6]/82 p-1 text-sm font-semibold text-[#7c746a]">
+          <div className="grid grid-cols-2 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#f5efe6]/82 p-1 text-xs font-semibold text-[#7c746a] sm:text-sm">
             <button
               type="button"
               onClick={() => setHomeMode("guest")}
-              className={`rounded-full px-4 py-2 transition ${homeMode === "guest" ? "bg-[#fffdf8] text-[#2b2a27] shadow-[0_10px_22px_rgba(52,44,35,0.10)]" : "hover:text-[#2b2a27]"}`}
+              className={`rounded-full px-3 py-2 transition ${homeMode === "guest" ? "bg-[#fffdf8] text-[#2b2a27] shadow-[0_10px_22px_rgba(52,44,35,0.10)]" : "hover:text-[#2b2a27]"}`}
             >
               Я гость
             </button>
             <button
               type="button"
               onClick={() => setHomeMode("organizer")}
-              className={`rounded-full px-4 py-2 transition ${homeMode === "organizer" ? "bg-[#fffdf8] text-[#2b2a27] shadow-[0_10px_22px_rgba(52,44,35,0.10)]" : "hover:text-[#2b2a27]"}`}
+              className={`rounded-full px-3 py-2 transition ${homeMode === "organizer" ? "bg-[#fffdf8] text-[#2b2a27] shadow-[0_10px_22px_rgba(52,44,35,0.10)]" : "hover:text-[#2b2a27]"}`}
             >
               Я организатор
             </button>
@@ -1539,23 +1539,23 @@ function Home({
 
 function HomeGuestPanel({ startCreate }: { startCreate: () => void }) {
   return (
-    <div className="pt-5">
-      <div className="relative overflow-hidden rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 p-5 shadow-[0_16px_44px_rgba(52,44,35,0.07)] sm:p-6">
+    <div className="pt-4">
+      <div className="relative overflow-hidden rounded-[26px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 p-4 shadow-[0_14px_34px_rgba(52,44,35,0.07)] sm:p-5">
         <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-[#efe7da] opacity-80 blur-2xl" aria-hidden="true" />
         <div className="relative">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#596047]">для гостя</div>
-          <h3 className="sobralis-display mt-3 text-[2.4rem] leading-none sm:text-[3.1rem]">Пока нет приглашений</h3>
-          <p className="mt-3 max-w-md text-sm leading-6 text-[#7c746a] sm:text-base">
+          <h3 className="sobralis-display mt-2 text-[1.9rem] leading-none sm:text-[2.7rem]">Пока нет приглашений</h3>
+          <p className="mt-2 max-w-md text-sm leading-6 text-[#7c746a]">
             Когда вам пришлют ссылку на событие и вы отметите, что идёте, гостевая карточка появится в этом режиме.
           </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-3 gap-2">
             {["Дата и место", "Свободные места", "Запись в один клик"].map((item) => (
-              <span key={item} className="rounded-[20px] border border-[rgba(43,42,39,0.10)] bg-[#f5efe6]/70 px-4 py-3 text-sm font-semibold text-[#596047]">
+              <span key={item} className="rounded-[17px] border border-[rgba(43,42,39,0.10)] bg-[#f5efe6]/70 px-2.5 py-2 text-center text-[11px] font-semibold leading-4 text-[#596047] sm:text-sm sm:leading-5">
                 {item}
               </span>
             ))}
           </div>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button type="button" onClick={startCreate} className="sobralis-button-primary text-sm">
               Создать своё событие
             </button>
@@ -1586,14 +1586,14 @@ function HomeOrganizerPanel({
 }) {
   if (!cabinetUser) {
     return (
-      <div className="pt-5">
-        <div className="rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 p-5 shadow-[0_16px_44px_rgba(52,44,35,0.07)] sm:p-6">
+      <div className="pt-4">
+        <div className="rounded-[26px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/82 p-4 shadow-[0_14px_34px_rgba(52,44,35,0.07)] sm:p-5">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#596047]">нужен вход</div>
-          <h3 className="sobralis-display mt-3 text-[2.35rem] leading-none sm:text-[3rem]">События появятся после входа</h3>
-          <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base">
+          <h3 className="sobralis-display mt-2 text-[1.9rem] leading-none sm:text-[2.7rem]">События появятся после входа</h3>
+          <p className="mt-2 text-sm leading-6 text-[#7c746a]">
             Мы покажем только ваши карточки и организаторские действия после авторизации через Telegram.
           </p>
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={openDashboard} className="sobralis-button-primary text-sm">Войти</button>
             <button type="button" onClick={startCreate} className="sobralis-button-secondary text-sm">Создать событие</button>
           </div>
@@ -1603,7 +1603,7 @@ function HomeOrganizerPanel({
   }
 
   return (
-    <div className="pt-5">
+    <div className="pt-4">
       {isLoadingEvents && <EmptyState title="Загружаю события" text="Проверяю ваши карточки в базе." />}
       {!isLoadingEvents && events.length === 0 && (
         <EmptyState
@@ -1613,11 +1613,11 @@ function HomeOrganizerPanel({
         />
       )}
       {!isLoadingEvents && events.length > 0 && (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {events.slice(0, 4).map((event) => (
             <HomeOrganizerEventCard key={event.id} event={event} openOrganizerEvent={openOrganizerEvent} editEvent={editEvent} />
           ))}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button type="button" onClick={startCreate} className="sobralis-button-primary text-sm">Создать событие</button>
             <button type="button" onClick={openDashboard} className="sobralis-button-secondary text-sm">Все события</button>
           </div>
@@ -1641,35 +1641,35 @@ function HomeOrganizerEventCard({
   const progress = Math.min(100, Math.round((seatsTaken / seatsTotal) * 100));
 
   return (
-    <article className="relative overflow-hidden rounded-[28px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 shadow-[0_16px_44px_rgba(52,44,35,0.08)]">
+    <article className="relative overflow-hidden rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 shadow-[0_12px_32px_rgba(52,44,35,0.07)]">
       <button
         type="button"
         onClick={() => editEvent(event)}
-        className="absolute right-3 top-3 z-10 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/90 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#596047] shadow-[0_10px_24px_rgba(52,44,35,0.10)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55"
+        className="absolute right-2.5 top-2.5 z-10 rounded-full border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/92 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#596047] shadow-[0_8px_18px_rgba(52,44,35,0.09)] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55"
       >
         Редактировать
       </button>
-      <div className="grid gap-0 sm:grid-cols-[150px_1fr]">
+      <div className="grid gap-0 sm:grid-cols-[132px_1fr]">
         <EventThumb event={event} />
-        <div className="p-4 pr-4 sm:p-5 sm:pr-36">
+        <div className="p-3.5 pr-3.5 sm:p-4 sm:pr-32">
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#596047]">{formatEventDateLabel(event.date)}</div>
-          <h3 className="sobralis-display mt-2 text-[2rem] leading-none sm:text-[2.6rem]">{event.title}</h3>
-          <p className="mt-2 text-sm leading-6 text-[#7c746a]">{event.venue || "Место не указано"}</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[20px] bg-[#f5efe6]/80 px-4 py-3">
+          <h3 className="sobralis-display mt-1.5 text-[1.65rem] leading-none sm:text-[2.15rem]">{event.title}</h3>
+          <p className="mt-1.5 text-sm leading-5 text-[#7c746a]">{event.venue || "Место не указано"}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-[17px] bg-[#f5efe6]/80 px-3 py-2.5">
               <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#596047]">места</div>
-              <div className="mt-1 font-serif text-2xl text-[#2b2a27]">{seatsTaken} <span className="text-sm text-[#7c746a]">из {event.maxGuests}</span></div>
+              <div className="mt-1 font-serif text-xl text-[#2b2a27]">{seatsTaken} <span className="text-sm text-[#7c746a]">из {event.maxGuests}</span></div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e4dccf]">
                 <div className="h-full rounded-full bg-[#7e8466]" style={{ width: `${progress}%` }} />
               </div>
             </div>
-            <div className="rounded-[20px] bg-[#f5efe6]/80 px-4 py-3">
+            <div className="rounded-[17px] bg-[#f5efe6]/80 px-3 py-2.5">
               <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#596047]">ожидание</div>
-              <div className="mt-1 font-serif text-2xl text-[#2b2a27]">{event.waitlist.length} <span className="text-sm text-[#7c746a]">чел.</span></div>
-              <p className="mt-1 text-xs text-[#7c746a]">без гостевой кнопки записи</p>
+              <div className="mt-1 font-serif text-xl text-[#2b2a27]">{event.waitlist.length} <span className="text-sm text-[#7c746a]">чел.</span></div>
+              <p className="mt-1 text-[11px] leading-4 text-[#7c746a]">если мест не хватит</p>
             </div>
           </div>
-          <button type="button" onClick={() => openOrganizerEvent(event)} className="sobralis-button-secondary mt-4 w-full text-sm sm:w-auto">
+          <button type="button" onClick={() => openOrganizerEvent(event)} className="sobralis-button-secondary mt-3 min-h-10 w-full px-4 py-2 text-sm sm:w-auto">
             Подробнее
           </button>
         </div>
@@ -1803,16 +1803,16 @@ function Account({ goHome, onAuthenticated, returnTo }: { goHome: () => void; on
 
 function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew, logout }: { events: EventRecord[]; isLoading: boolean; openEvent: (event: EventRecord) => void; deleteEvent: (id: string) => void; createNew: () => void; logout: () => void }) {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-7">
-      <div className="sobralis-surface flex flex-col justify-between gap-4 rounded-[30px] p-5 sm:flex-row sm:items-center sm:p-6">
+    <section className="mx-auto max-w-4xl px-3 py-4 pb-24 sm:px-6 sm:py-6">
+      <div className="sobralis-surface flex flex-col justify-between gap-3 rounded-[26px] p-4 sm:flex-row sm:items-center sm:p-5">
         <div>
-          <span className="sobralis-chip">мои события</span>
-          <h1 className="sobralis-display mt-3 text-[2rem] leading-none sm:text-[2.8rem]">Карточки приглашений</h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-[#7c746a]">Ваши встречи, ссылки для гостей, места и ожидание.</p>
+          <span className="sobralis-chip">кабинет</span>
+          <h1 className="sobralis-display mt-2 text-[1.75rem] leading-none sm:text-[2.35rem]">Мои события</h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-5 text-[#7c746a]">Карточки, места, ожидание и ссылки для гостей.</p>
         </div>
-        {events.length > 0 && <button onClick={createNew} className="sobralis-button-primary shrink-0">Создать событие</button>}
+        {events.length > 0 && <button onClick={createNew} className="sobralis-button-primary min-h-10 shrink-0 px-4 py-2 text-sm">Создать</button>}
       </div>
-      <div className="mt-5 grid gap-4 sm:mt-7">
+      <div className="mt-4 grid gap-3 sm:mt-5">
         {isLoading && <EmptyState title="Загружаю события" text="Сейчас подтяну список из базы." />}
         {!isLoading && events.length === 0 && (
           <EmptyState
@@ -1822,29 +1822,33 @@ function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew, logou
           />
         )}
         {events.map((event) => (
-          <article key={event.id} className="overflow-hidden rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/88 shadow-[0_18px_48px_rgba(52,44,35,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(52,44,35,0.12)]">
-            <div className="grid gap-0 sm:grid-cols-[190px_1fr]">
+          <article key={event.id} className="overflow-hidden rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/88 shadow-[0_12px_34px_rgba(52,44,35,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(52,44,35,0.11)]">
+            <div className="grid gap-0 sm:grid-cols-[150px_1fr]">
               <EventThumb event={event} />
-              <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#596047]">{formatDate(event.date, event.time)}</div>
-                  <h2 className="sobralis-display mt-2 text-3xl leading-none sm:text-4xl">{event.title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-[#7c746a] sm:text-base">{event.venue || "Место не указано"} · {event.participants.length}/{event.maxGuests} мест занято</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#596047]">{formatDate(event.date, event.time)}</div>
+                  <h2 className="sobralis-display mt-1.5 truncate text-[1.65rem] leading-none sm:text-[2.2rem]">{event.title}</h2>
+                  <p className="mt-1.5 text-sm leading-5 text-[#7c746a]">{event.venue || "Место не указано"} · {event.participants.length}/{event.maxGuests} мест</p>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
                     <span className="rounded-full bg-[#e8f8ef] px-3 py-1 text-xs font-semibold text-[#596047]">{event.participants.length >= event.minGuests ? "состав собран" : "нужно гостей"}</span>
                     <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-semibold text-[#8a642b]">{event.waitlist.length} в ожидании</span>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => openEvent(event)} className="sobralis-button-primary min-h-11 px-5 py-2.5 text-sm">Открыть</button>
-                  <button onClick={() => deleteEvent(event.id)} className="sobralis-button-secondary min-h-11 px-5 py-2.5 text-sm text-[#d94a38]">Удалить</button>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                  <button onClick={() => openEvent(event)} className="sobralis-button-primary min-h-10 px-4 py-2 text-sm">Открыть</button>
+                  <button onClick={() => deleteEvent(event.id)} className="sobralis-button-secondary min-h-10 px-4 py-2 text-sm text-[#d94a38]">Удалить</button>
                 </div>
               </div>
             </div>
           </article>
         ))}
       </div>
-      <div className="mt-7 flex justify-center">
+      <div className="fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-md gap-2 rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/90 p-2 shadow-[0_18px_50px_rgba(52,44,35,0.16)] backdrop-blur-xl sm:hidden">
+        <button onClick={createNew} className="sobralis-button-primary min-h-11 flex-1 text-sm">Создать</button>
+        <button onClick={logout} className="sobralis-button-secondary min-h-11 flex-1 text-sm">Выйти</button>
+      </div>
+      <div className="mt-6 hidden justify-center sm:flex">
         <button onClick={logout} className="rounded-full border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/56 px-4 py-2 text-xs font-semibold text-[#9a9188] transition hover:-translate-y-0.5 hover:border-[#c59a55]/55 hover:text-[#2b2a27]">
           Выйти из аккаунта
         </button>
@@ -1855,22 +1859,22 @@ function Dashboard({ events, isLoading, openEvent, deleteEvent, createNew, logou
 
 function KindPicker({ goBack, chooseKind }: { goBack: () => void; chooseKind: (kind: EventKind) => void }) {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-9">
+    <section className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-7">
       <StepBack onClick={goBack} />
-      <div className="max-w-3xl">
+      <div className="max-w-2xl">
         <span className="sobralis-chip">новое приглашение</span>
-        <h1 className="sobralis-display mt-4 text-[2.35rem] leading-none sm:text-[3.4rem]">Какое мероприятие?</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#7c746a] sm:text-base">Выберите сценарий, а дальше соберём красивую карточку для гостей: место, время, комментарии и лист ожидания.</p>
+        <h1 className="sobralis-display mt-3 text-[2rem] leading-none sm:text-[3rem]">Какое мероприятие?</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-5 text-[#7c746a]">Выберите формат, дальше соберём карточку: место, время, гости и визуал.</p>
       </div>
-      <div className="mt-6 grid gap-4 md:grid-cols-2 sm:mt-8">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7">
         {eventKinds.map((kind) => (
-          <button key={kind.id} onClick={() => chooseKind(kind.id)} className="group relative overflow-hidden rounded-[30px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 p-5 text-left shadow-[0_16px_44px_rgba(52,44,35,0.08)] transition hover:-translate-y-1 hover:border-[#c59a55]/55 hover:shadow-[0_24px_60px_rgba(52,44,35,0.12)] sm:p-6">
+          <button key={kind.id} onClick={() => chooseKind(kind.id)} className="group relative min-h-40 overflow-hidden rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/86 p-3.5 text-left shadow-[0_12px_34px_rgba(52,44,35,0.07)] transition hover:-translate-y-1 hover:border-[#c59a55]/55 hover:shadow-[0_20px_48px_rgba(52,44,35,0.11)] sm:p-5">
             <div className={`absolute -right-10 -top-10 h-28 w-28 rounded-full ${kind.accent} opacity-70 blur-xl`} aria-hidden="true" />
             <div className="relative">
-              <span className="mb-4 inline-flex rounded-full bg-[#f5efe6]/85 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#596047]">формат встречи</span>
-              <h2 className="sobralis-display text-3xl leading-none sm:text-4xl">{kind.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base sm:leading-7">{kind.description}</p>
-              <div className="mt-5 inline-flex rounded-full bg-[#f5efe6] px-4 py-2 text-sm font-semibold text-[#596047] transition group-hover:bg-[#7e8466] group-hover:text-[#fffdf8]">Выбрать</div>
+              <span className="mb-3 inline-flex rounded-full bg-[#f5efe6]/85 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#596047]">формат</span>
+              <h2 className="sobralis-display text-[1.65rem] leading-none sm:text-4xl">{kind.title}</h2>
+              <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#7c746a] sm:text-sm">{kind.description}</p>
+              <div className="mt-4 inline-flex rounded-full bg-[#f5efe6] px-3 py-1.5 text-xs font-semibold text-[#596047] transition group-hover:bg-[#7e8466] group-hover:text-[#fffdf8]">Выбрать</div>
             </div>
           </button>
         ))}
@@ -2072,35 +2076,35 @@ function Builder(props: BuilderProps) {
   }
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-9">
+    <section className="mx-auto max-w-3xl px-3 py-4 pb-28 sm:px-6 sm:py-7">
       <StepBack onClick={props.goBack} />
       <Card className="relative overflow-hidden">
         <div className="absolute -right-28 -top-32 h-72 w-72 rounded-full bg-[#c59a55]/12 blur-3xl" aria-hidden="true" />
         <div className="absolute -bottom-28 -left-24 h-64 w-64 rounded-full bg-[#7e8466]/10 blur-3xl" aria-hidden="true" />
-        <div className="relative mb-6 max-w-2xl">
+        <div className="relative mb-4 max-w-2xl">
           <span className="sobralis-chip">{props.selectedKind.title}</span>
-          <h1 className="sobralis-display mt-4 text-[2.35rem] leading-none sm:text-[3.35rem]">Детали приглашения</h1>
-          <p className="mt-3 text-sm leading-6 text-[#7c746a] sm:text-base">Заполните только то, что нужно гостю: куда прийти, когда, сколько мест и что важно знать перед встречей.</p>
+          <h1 className="sobralis-display mt-3 text-[1.95rem] leading-none sm:text-[2.85rem]">Детали приглашения</h1>
+          <p className="mt-2 text-sm leading-5 text-[#7c746a]">Заполните только то, что увидит гость: куда прийти, когда, сколько мест и что важно знать.</p>
         </div>
 
         <BuilderProgress steps={progressSteps} />
 
-        <div className="relative mt-5 grid gap-4 sm:gap-5">
+        <div className="relative mt-4 grid gap-3 sm:gap-4">
           <Section title="Название и текст для гостей">
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               <Field label="Название *">
                 <input data-required-error={props.requiredErrors.title ? "true" : undefined} className={`input ${inputStateClass(props.requiredErrors.title)}`} value={props.title} onChange={(event) => props.setTitle(event.target.value)} placeholder="Например: Женский завтрак" />
                 <RequiredHint show={props.requiredErrors.title} />
               </Field>
               <Field label="Текст приглашения">
-                <textarea className="input min-h-28 resize-none leading-6" maxLength={260} value={props.guestText} onChange={(event) => props.setGuestText(event.target.value)} placeholder="Пожелания по одежде, настроение встречи или важные детали для гостей" />
-                <div className="mt-2 text-xs font-semibold text-[#9a9085]">До 260 символов. Если оставить пустым, на карточке будет кнопка «Добавить описание».</div>
+                <textarea className="input min-h-24 resize-none leading-6" maxLength={220} value={props.guestText} onChange={(event) => props.setGuestText(event.target.value)} placeholder="Пожелания по одежде, настроение встречи или важные детали для гостей" />
+                <div className="mt-2 text-xs font-semibold text-[#9a9085]">До 220 символов. Если оставить пустым, на карточке будет кнопка «Добавить описание».</div>
               </Field>
             </div>
           </Section>
 
           <Section title="Место и время">
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               <Field label="Место проведения *">
                 <input data-required-error={props.requiredErrors.venue ? "true" : undefined} className={`input ${inputStateClass(props.requiredErrors.venue)}`} value={props.venue} onChange={(event) => props.setVenue(event.target.value)} />
                 <RequiredHint show={props.requiredErrors.venue} />
@@ -2108,7 +2112,7 @@ function Builder(props: BuilderProps) {
               <Field label="Ссылка на точку на карте">
                 <input className="input" value={props.mapUrl} onChange={(event) => props.setMapUrl(event.target.value)} placeholder="Яндекс.Карты, 2ГИС или Google Maps" />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Дата *">
                   <input data-required-error={props.requiredErrors.date ? "true" : undefined} type="date" className={`input input-compact ${inputStateClass(props.requiredErrors.date)}`} value={props.date} onChange={(event) => props.setDate(event.target.value)} />
                   <RequiredHint show={props.requiredErrors.date} />
@@ -2122,7 +2126,7 @@ function Builder(props: BuilderProps) {
           </Section>
 
           <Section title="Участники">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Минимум гостей">
                 <input type="number" min="1" className="input" value={props.minGuests} onChange={(event) => props.setMinGuests(Number(event.target.value))} />
               </Field>
@@ -2141,14 +2145,14 @@ function Builder(props: BuilderProps) {
               </select>
             </Field>
             {props.paymentMode === "manual" && (
-              <div className="mt-4 grid gap-4">
+              <div className="mt-3 grid gap-3">
                 <Field label="Сумма для оплаты">
                   <input type="number" min="0" className="input" value={props.totalCost} onChange={(event) => props.setTotalCost(Number(event.target.value))} />
                 </Field>
-                <div className="rounded-[20px] border border-[#e7ded2] bg-[#f5efe6]/65 px-4 py-3 text-xs font-semibold leading-5 text-[#7c746a]">
+                <div className="rounded-[18px] border border-[#e7ded2] bg-[#f5efe6]/65 px-3.5 py-2.5 text-xs font-semibold leading-5 text-[#7c746a]">
                   Реквизиты будут нужны для отдельного сценария «Открыть оплату». Сейчас не показываем оплату главным элементом гостевой карточки.
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <Field label="Банк">
                     <input className="input" value={props.bankName} onChange={(event) => props.setBankName(event.target.value)} placeholder="Например: Т-Банк" />
                   </Field>
@@ -2162,10 +2166,10 @@ function Builder(props: BuilderProps) {
 
           <Section title="Изображение для карточки события">
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button onClick={() => fileInputRef.current?.click()} className="min-h-32 rounded-[26px] border border-dashed border-[#d8cdbf] bg-[#fffdf8]/74 p-4 text-left font-semibold text-[#2b2a27] transition hover:-translate-y-0.5 hover:border-[#7e8466] hover:shadow-[0_14px_32px_rgba(52,44,35,0.08)] sm:min-h-36">
-                <span className="block text-sm font-bold uppercase tracking-[0.14em] text-[#596047]">своё фото</span>
-                <span className="mt-2 block text-base">Загрузить изображение</span>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              <button onClick={() => fileInputRef.current?.click()} className="min-h-32 rounded-[22px] border border-dashed border-[#d8cdbf] bg-[#fffdf8]/74 p-3 text-left font-semibold text-[#2b2a27] transition hover:-translate-y-0.5 hover:border-[#7e8466] hover:shadow-[0_14px_32px_rgba(52,44,35,0.08)]">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.13em] text-[#596047]">своё фото</span>
+                <span className="mt-2 block text-sm">Загрузить</span>
               </button>
               {props.availableVisuals.map((item) => (
                 <button
@@ -2178,22 +2182,22 @@ function Builder(props: BuilderProps) {
                     props.setImagePositionY(48);
                     props.setImageScale(100);
                   }}
-                  className={`overflow-hidden rounded-[26px] border bg-[#fffdf8] text-left shadow-[0_10px_26px_rgba(52,44,35,0.06)] transition hover:-translate-y-0.5 ${props.eventImageId === item.id && !props.customImagePreview ? "border-[#7e8466] ring-2 ring-[#c59a55]/30" : "border-[#e7ded2]"}`}
+                  className={`overflow-hidden rounded-[22px] border bg-[#fffdf8] text-left shadow-[0_10px_26px_rgba(52,44,35,0.06)] transition hover:-translate-y-0.5 ${props.eventImageId === item.id && !props.customImagePreview ? "border-[#7e8466] ring-2 ring-[#c59a55]/30" : "border-[#e7ded2]"}`}
                 >
-                  <div className="px-3 pt-3">
+                  <div className="px-2.5 pt-2.5">
                     <EventVisualFrame visual={toBuilderEventVisualOption(item, item.kind)} variant="picker" shape="wave" />
                   </div>
-                  <div className="p-2.5 text-sm font-semibold">{item.title}</div>
+                  <div className="truncate p-2 text-xs font-semibold">{item.title}</div>
                 </button>
               ))}
             </div>
-            <div className="mt-4 rounded-[28px] border border-[#e7ded2] bg-[#fffdf8]/80 p-4 shadow-[0_14px_36px_rgba(52,44,35,0.08)]">
-              <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,230px)_minmax(0,1fr)]">
+            <div className="mt-3 rounded-[24px] border border-[#e7ded2] bg-[#fffdf8]/80 p-3 shadow-[0_12px_30px_rgba(52,44,35,0.07)]">
+              <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,210px)_minmax(0,1fr)]">
                 <EventVisualFrame visual={selectedVisualOption} crop={selectedVisualCrop} variant="tool" shape="wave" />
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.14em] text-[#596047]">как увидят гости</div>
                   <div className="mt-2 text-base font-semibold text-[#2b2a27]">{props.customImagePreview ? "Своё изображение выбрано" : props.visual.title}</div>
-                  <p className="mt-2 max-w-md text-sm leading-6 text-[#7c746a]">Картинка сразу показана в форме итоговой карточки события.</p>
+                  <p className="mt-1.5 max-w-md text-sm leading-5 text-[#7c746a]">Картинка сразу показана в форме итоговой карточки события.</p>
                   {props.customImagePreview && (
                     <button
                       onClick={() => {
@@ -2215,20 +2219,22 @@ function Builder(props: BuilderProps) {
         </div>
 
         {props.error && <Alert type="error">{props.error}</Alert>}
-        <button onClick={props.createEvent} className="sobralis-button-primary mt-6 w-full text-base">
+        <div className="sticky bottom-3 z-20 mt-5 rounded-[24px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/90 p-2 shadow-[0_18px_50px_rgba(52,44,35,0.16)] backdrop-blur-xl">
+        <button onClick={props.createEvent} className="sobralis-button-primary w-full text-[0.95rem]">
           Сохранить и открыть предпросмотр
         </button>
+        </div>
       </Card>
       {draftImagePreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2a27]/48 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-[32px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8] p-4 shadow-[0_28px_100px_rgba(43,42,39,0.24)] sm:p-5">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#2b2a27]/48 px-2 py-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
+          <div className="max-h-[92svh] w-full max-w-2xl overflow-auto rounded-[28px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8] p-3.5 shadow-[0_28px_100px_rgba(43,42,39,0.24)] sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="sobralis-display text-3xl leading-none text-[#2b2a27] sm:text-4xl">Выберите фрагмент</h2>
-                <p className="mt-1 text-sm leading-6 text-[#6f665d]">Двигайте фотографию пальцем или мышкой, чтобы в светлой рамке осталась нужная часть.</p>
+                <h2 className="sobralis-display text-2xl leading-none text-[#2b2a27] sm:text-4xl">Выберите фрагмент</h2>
+                <p className="mt-1 text-sm leading-5 text-[#6f665d]">Двигайте фото пальцем или мышкой, чтобы в форме осталась нужная часть.</p>
               </div>
-              <button onClick={cancelCrop} className="sobralis-button-secondary min-h-10 rounded-full px-4 py-2 text-sm">
-                Отменить
+              <button onClick={cancelCrop} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#e7ded2] bg-[#fffdf8] text-xl leading-none text-[#6f665d] shadow-[0_8px_18px_rgba(52,44,35,0.08)]">
+                ×
               </button>
             </div>
             <div
@@ -2237,7 +2243,7 @@ function Builder(props: BuilderProps) {
               onPointerMove={moveCropDrag}
               onPointerUp={stopCropDrag}
               onPointerCancel={stopCropDrag}
-              className="relative mt-4 grid min-h-72 cursor-grab touch-none place-items-center overflow-hidden rounded-[28px] border border-[#e7ded2] bg-[#f5efe6]/70 py-5 active:cursor-grabbing"
+              className="relative mt-3 grid min-h-72 cursor-grab touch-none place-items-center overflow-hidden rounded-[24px] border border-[#e7ded2] bg-[#f5efe6]/70 py-4 active:cursor-grabbing"
             >
               <EventVisualFrame visual={draftVisualOption} crop={draftVisualCrop} variant="tool" shape="wave" />
               <span className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-[#fffdf8]/70 bg-[#fffdf8]/80 px-3 py-2 text-xs font-bold text-[#6f665d] shadow-[0_10px_24px_rgba(52,44,35,0.10)]">
@@ -2249,7 +2255,7 @@ function Builder(props: BuilderProps) {
               <input type="range" min="100" max="220" step="5" value={draftScale} onChange={(event) => setDraftScale(Number(event.target.value))} className="mt-2 w-full accent-[#7e8466]" />
             </label>
             {uploadError && <div className="mt-3 rounded-2xl border border-[#efd0ca] bg-[#fff4f1] px-4 py-3 text-sm font-semibold text-[#d94a38]">{uploadError}</div>}
-            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
               <button disabled={isUploadingImage} onClick={cancelCrop} className="sobralis-button-secondary disabled:opacity-60">
                 Отменить
               </button>
@@ -2269,15 +2275,15 @@ function BuilderProgress({ steps }: { steps: Array<{ label: string; done: boolea
   const width = Math.max(1, Math.round((doneCount / steps.length) * 100)) + "%";
 
   return (
-    <div className="relative rounded-[26px] border border-[rgba(43,42,39,0.10)] bg-[#f5efe6]/62 p-4 shadow-[0_10px_24px_rgba(52,44,35,0.04)]">
-      <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#596047]">
+    <div className="sticky top-[72px] z-20 rounded-[22px] border border-[rgba(43,42,39,0.10)] bg-[#f5efe6]/88 p-3 shadow-[0_10px_24px_rgba(52,44,35,0.06)] backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#596047] sm:text-xs">
         <span>Заполнение приглашения</span>
         <span>{doneCount} из {steps.length}</span>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e4dccf]">
+      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#e4dccf]">
         <div className="h-full rounded-full bg-[#7e8466] transition-all" style={{ width }} />
       </div>
-      <div className="mt-3 grid grid-cols-5 gap-1.5 text-center text-[10px] font-semibold text-[#7c746a] sm:text-xs">
+      <div className="mt-2.5 grid grid-cols-5 gap-1 text-center text-[9px] font-semibold text-[#7c746a] sm:text-xs">
         {steps.map((step) => (
           <span key={step.label} className={step.done ? "text-[#596047]" : "text-[#9a9085]"}>{step.label}</span>
         ))}
@@ -2300,14 +2306,14 @@ function TimeWheelPicker({ value, onChange, hasError }: { value: string; onChang
   const classes = hasError ? "border-[#d94a38] bg-[#fff7f5] shadow-[0_0_0_4px_rgba(217,74,56,0.10)]" : "border-[#e7ded2] bg-[#fffdf8]";
 
   return (
-    <div data-required-error={hasError ? "true" : undefined} className={`grid grid-cols-2 gap-2 rounded-[22px] border p-2 ${classes}`}>
-      <select aria-label="Часы" className="rounded-[16px] border border-[#e7ded2] bg-[#fffdf8] px-3 py-3 text-base font-semibold text-[#2b2a27] outline-none" value={selectedHour} onChange={(event) => update("hour", event.target.value)}>
+    <div data-required-error={hasError ? "true" : undefined} className={`grid grid-cols-2 gap-2 rounded-[18px] border p-1.5 ${classes}`}>
+      <select aria-label="Часы" className="rounded-[14px] border border-[#e7ded2] bg-[#fffdf8] px-2.5 py-2.5 text-sm font-semibold text-[#2b2a27] outline-none" value={selectedHour} onChange={(event) => update("hour", event.target.value)}>
         <option value="">Часы</option>
         {hours.map((hour) => (
           <option key={hour} value={hour}>{hour}</option>
         ))}
       </select>
-      <select aria-label="Минуты" className="rounded-[16px] border border-[#e7ded2] bg-[#fffdf8] px-3 py-3 text-base font-semibold text-[#2b2a27] outline-none" value={selectedMinute} onChange={(event) => update("minute", event.target.value)}>
+      <select aria-label="Минуты" className="rounded-[14px] border border-[#e7ded2] bg-[#fffdf8] px-2.5 py-2.5 text-sm font-semibold text-[#2b2a27] outline-none" value={selectedMinute} onChange={(event) => update("minute", event.target.value)}>
         <option value="">Минуты</option>
         {minutes.map((minute) => (
           <option key={minute} value={minute}>{minute}</option>
@@ -2559,7 +2565,7 @@ function EventThumb({ event }: { event: EventRecord }) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-2 text-sm font-semibold text-[#5f564f]">{label}</div>
+      <div className="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[#5f564f]">{label}</div>
       {children}
     </label>
   );
@@ -2567,21 +2573,21 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-[28px] border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/76 p-4 shadow-[0_10px_30px_rgba(52,44,35,0.04)] sm:p-5">
-      <h2 className="mb-4 text-lg font-semibold text-[#2b2a27] sm:text-xl">{title}</h2>
+    <section className="rounded-[24px] border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/76 p-3.5 shadow-[0_8px_24px_rgba(52,44,35,0.04)] sm:p-4">
+      <h2 className="mb-3 text-base font-semibold text-[#2b2a27] sm:text-lg">{title}</h2>
       {children}
     </section>
   );
 }
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-[32px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/88 p-4 shadow-[0_24px_70px_rgba(52,44,35,0.11)] backdrop-blur sm:rounded-[38px] sm:p-6 ${className}`}>{children}</div>;
+  return <div className={`rounded-[28px] border border-[rgba(43,42,39,0.12)] bg-[#fffdf8]/88 p-3.5 shadow-[0_20px_58px_rgba(52,44,35,0.10)] backdrop-blur sm:rounded-[34px] sm:p-5 ${className}`}>{children}</div>;
 }
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mt-6">
-      <h3 className="mb-3 text-lg font-semibold sm:text-xl">{title}</h3>
+    <div className="mt-5">
+      <h3 className="mb-2.5 text-base font-semibold sm:text-lg">{title}</h3>
       {children}
     </div>
   );
@@ -2589,9 +2595,9 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[22px] border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/78 px-3 py-3 shadow-[0_8px_22px_rgba(52,44,35,0.05)]">
+    <div className="rounded-[18px] border border-[rgba(43,42,39,0.10)] bg-[#fffdf8]/78 px-3 py-2.5 shadow-[0_8px_22px_rgba(52,44,35,0.05)]">
       <div className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#596047] sm:text-xs">{label}</div>
-      <div className="sobralis-display mt-1 text-2xl leading-none sm:text-3xl">{value}</div>
+      <div className="sobralis-display mt-1 text-xl leading-none sm:text-2xl">{value}</div>
     </div>
   );
 }
@@ -2607,8 +2613,8 @@ function Alert({ type, children }: { type: "success" | "info" | "error"; childre
 
 function EmptyState({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
   return (
-    <div className="rounded-[30px] border border-dashed border-[#d8cdbf] bg-[#fffdf8]/70 p-6 text-center shadow-[0_14px_34px_rgba(52,44,35,0.06)] sm:p-7">
-      <h3 className="sobralis-display text-2xl leading-none">{title}</h3>
+    <div className="rounded-[24px] border border-dashed border-[#d8cdbf] bg-[#fffdf8]/70 p-5 text-center shadow-[0_12px_30px_rgba(52,44,35,0.06)] sm:p-6">
+      <h3 className="sobralis-display text-[1.65rem] leading-none">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6f665d]">{text}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -2617,7 +2623,7 @@ function EmptyState({ title, text, action }: { title: string; text: string; acti
 
 function StepBack({ onClick, label = "Назад" }: { onClick: () => void; label?: string }) {
   return (
-    <button onClick={onClick} className="mb-4 inline-flex rounded-full px-1 py-2 text-sm font-semibold text-[#596047] transition hover:text-[#2b2a27]">
+    <button onClick={onClick} className="mb-3 inline-flex rounded-full px-1 py-1.5 text-sm font-semibold text-[#596047] transition hover:text-[#2b2a27]">
       ← {label}
     </button>
   );
